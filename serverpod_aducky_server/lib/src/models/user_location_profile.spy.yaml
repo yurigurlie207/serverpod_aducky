@@ -1,0 +1,13 @@
+class: UserLocationProfile
+table: user_location_profile
+fields:
+  authUserId: UuidValue
+  homeAddress: String
+  homeLat: double
+  homeLng: double
+  meetingBufferMinutes: int?, default=0
+  googleAccessToken: String?
+indexes:
+  user_location_profile_auth_user_idx:
+    fields: authUserId
+    unique: true

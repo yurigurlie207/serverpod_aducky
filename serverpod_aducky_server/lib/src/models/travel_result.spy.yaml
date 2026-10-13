@@ -1,0 +1,6 @@
+class: TravelResult
+fields:
+  durationMinutes: int
+  distanceText: String
+  weatherBufferMinutes: int
+  totalMinutes: int

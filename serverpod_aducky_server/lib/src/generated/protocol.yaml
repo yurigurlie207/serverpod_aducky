@@ -1,0 +1,38 @@
+emailIdp:
+  - login:
+  - startRegistration:
+  - verifyRegistrationCode:
+  - finishRegistration:
+  - startPasswordReset:
+  - verifyPasswordResetCode:
+  - finishPasswordReset:
+  - hasAccount:
+jwtRefresh:
+  - refreshAccessToken:
+ai:
+  - editScheduleWithClaude:
+calendar:
+  - getUpcomingEvents:
+  - updateEvent:
+  - deleteEvent:
+contact:
+  - sendContactMessage:
+googleIdp:
+  - login:
+  - loginWithCode:
+  - hasAccount:
+notification:
+  - isTwilioConfigured:
+  - sendSms:
+  - sendDepartureAlert:
+  - sendTestSms:
+places:
+  - getSuggestions:
+  - getPlaceDetails:
+profile:
+  - getProfile:
+  - saveProfile:
+travel:
+  - getTravelTime:
+greeting:
+  - hello:

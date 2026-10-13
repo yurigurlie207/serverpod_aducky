@@ -1,0 +1,63 @@
+# Files and directories created by pub
+.dart_tool/
+**/.dart_tool/
+.packages
+**/.packages
+.pub-cache/
+.pub/
+
+# Pubspec overrides
+pubspec_overrides.yaml
+
+# OS files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Python virtual environment
+venv/
+*.pyc
+__pycache__/
+
+# Scratch files
+scratch/
+scratch_*.dart
+remove_bg.py
+*.log
+**/*.log
+
+# Passwords & Secrets (CRITICAL - DO NOT COMMIT)
+config/passwords.yaml
+**/config/passwords.yaml
+*.env
+config/firebase_service_account_key.json
+**/config/firebase_service_account_key.json
+
+# Serverpod runtime & databases
+.serverpod/
+**/.serverpod/
+**/sp_*.db*
+web/app
+**/web/app
+
+# Build outputs
+build/
+**/build/
+doc/api/
+**/doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Agents & IDE
+.dart_skills/
+.agents/
+.claude/
+.gemini/
+.cursor/
+.codex/
+.mcp.json
+.vscode/mcp.json
+.appstudio/
+
+# Serverpod Cloud CLI
+.scloud/

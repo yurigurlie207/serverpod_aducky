@@ -1,0 +1,8 @@
+class: AiScheduleResponse
+fields:
+  success: bool
+  summary: String
+  suggestedEvents: List<CalendarEvent>
+  actionsTaken: List<String>
+  apiKeyConfigured: bool
+  error: String?

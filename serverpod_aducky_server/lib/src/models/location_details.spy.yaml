@@ -1,0 +1,4 @@
+class: LocationDetails
+fields:
+  lat: double
+  lng: double

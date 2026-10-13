@@ -1,0 +1,12 @@
+class: CalendarEvent
+table: calendar_event
+fields:
+  userId: UuidValue?
+  eventId: String
+  title: String
+  startTime: DateTime
+  endTime: DateTime
+  location: String?
+  startLocation: String?
+  transportMode: String?, default='driving'
+  isDeleted: bool, default=false

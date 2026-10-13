@@ -1,0 +1,4 @@
+class: PlaceSuggestion
+fields:
+  description: String
+  placeId: String
