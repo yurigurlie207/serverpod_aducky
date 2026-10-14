@@ -25,8 +25,15 @@ import 'about_screen.dart';
 
 class EditEventScreen extends StatefulWidget {
   final CalendarEvent? event;
+  final String? defaultStartLocation;
+  final int? defaultBufferMinutes;
 
-  const EditEventScreen({super.key, this.event});
+  const EditEventScreen({
+    super.key,
+    this.event,
+    this.defaultStartLocation,
+    this.defaultBufferMinutes,
+  });
 
   @override
   State<EditEventScreen> createState() => _EditEventScreenState();
@@ -37,6 +44,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
   late TextEditingController _titleController;
   late TextEditingController _startLocationController;
   late TextEditingController _locationController;
+  late TextEditingController _bufferController;
   late String _transportMode;
   late DateTime _startTime;
   late DateTime _endTime;
@@ -49,12 +57,20 @@ class _EditEventScreenState extends State<EditEventScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.event?.title ?? '');
-    _startLocationController = TextEditingController(
-      text: widget.event?.startLocation ?? '',
-    );
+    final eventStart = widget.event?.startLocation?.trim();
+    final defaultStart = widget.defaultStartLocation?.trim();
+    final initialStart = (eventStart != null && eventStart.isNotEmpty)
+        ? eventStart
+        : (defaultStart != null && defaultStart.isNotEmpty)
+        ? defaultStart
+        : '';
+    _startLocationController = TextEditingController(text: initialStart);
     _locationController = TextEditingController(
       text: widget.event?.location ?? '',
     );
+    final initialBuffer =
+        widget.event?.bufferMinutes ?? widget.defaultBufferMinutes ?? 0;
+    _bufferController = TextEditingController(text: initialBuffer.toString());
     _transportMode = widget.event?.transportMode ?? 'driving';
     final now = DateTime.now();
     _startTime =
@@ -64,7 +80,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
         widget.event?.endTime.toLocal() ??
         _startTime.add(const Duration(hours: 1));
 
-    if (_startLocationController.text.isEmpty) {
+    if (_startLocationController.text.trim().isEmpty) {
       _loadDefaultHomeAddress();
     }
     _loadPersonOptions();
@@ -103,10 +119,10 @@ class _EditEventScreenState extends State<EditEventScreen> {
   Future<void> _loadDefaultHomeAddress() async {
     try {
       final profile = await client.profile.getProfile();
-      if (profile != null && profile.homeAddress.isNotEmpty && mounted) {
-        if (_startLocationController.text.isEmpty) {
+      if (profile != null && profile.homeAddress.trim().isNotEmpty && mounted) {
+        if (_startLocationController.text.trim().isEmpty) {
           setState(() {
-            _startLocationController.text = profile.homeAddress;
+            _startLocationController.text = profile.homeAddress.trim();
           });
         }
       }
@@ -118,6 +134,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     _titleController.dispose();
     _startLocationController.dispose();
     _locationController.dispose();
+    _bufferController.dispose();
     super.dispose();
   }
 
@@ -157,13 +174,23 @@ class _EditEventScreenState extends State<EditEventScreen> {
 
     try {
       final loc = _locationController.text.trim();
-      final startLoc = _startLocationController.text.trim();
+      var startLoc = _startLocationController.text.trim();
+      if (startLoc.isEmpty &&
+          widget.defaultStartLocation != null &&
+          widget.defaultStartLocation!.trim().isNotEmpty) {
+        startLoc = widget.defaultStartLocation!.trim();
+      }
+      final bufferMins =
+          int.tryParse(_bufferController.text.trim()) ??
+          widget.defaultBufferMinutes ??
+          0;
       final savedEvent =
           widget.event?.copyWith(
             title: _titleController.text.trim(),
             location: loc.isNotEmpty ? loc : null,
             startLocation: startLoc.isNotEmpty ? startLoc : null,
             transportMode: _transportMode,
+            bufferMinutes: bufferMins,
             startTime: _startTime.toUtc(),
             endTime: _endTime.toUtc(),
           ) ??
@@ -173,6 +200,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
             location: loc.isNotEmpty ? loc : null,
             startLocation: startLoc.isNotEmpty ? startLoc : null,
             transportMode: _transportMode,
+            bufferMinutes: bufferMins,
             startTime: _startTime.toUtc(),
             endTime: _endTime.toUtc(),
           );
@@ -190,7 +218,11 @@ class _EditEventScreenState extends State<EditEventScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
@@ -691,6 +723,51 @@ class _EditEventScreenState extends State<EditEventScreen> {
                                   _transportMode = newSelection.first;
                                 });
                               },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Buffer Time',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _bufferController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Buffer Minutes',
+                                hintText: 'Extra padding before meeting',
+                                prefixIcon: const Icon(
+                                  Icons.hourglass_empty_rounded,
+                                  size: 20,
+                                ),
+                                suffixText: 'mins',
+                                border: const OutlineInputBorder(),
+                                helperText:
+                                    'Extra time added before arrival for peace of mind',
+                                helperStyle: GoogleFonts.fredoka(fontSize: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children: [0, 5, 10, 15, 20, 30].map((mins) {
+                                return ActionChip(
+                                  label: Text('${mins}m'),
+                                  onPressed: () {
+                                    setState(() {
+                                      _bufferController.text = mins.toString();
+                                    });
+                                  },
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),

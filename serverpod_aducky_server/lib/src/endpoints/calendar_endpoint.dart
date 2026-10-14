@@ -25,8 +25,11 @@ class CalendarEndpoint extends Endpoint {
       final timeMax = end?.toUtc() ?? timeMin.add(const Duration(hours: 24));
 
       // Get authenticated user's profile to extract email
-      final userProfile = await session.authenticated?.userProfile(session);
-      final email = userProfile?.email?.trim();
+      String? email;
+      try {
+        final userProfile = await session.authenticated?.userProfile(session);
+        email = userProfile?.email?.trim();
+      } catch (_) {}
 
       // Check user location profile for home address and stored token
       var userLocProfile = await UserLocationProfile.db.findFirstRow(
@@ -129,6 +132,7 @@ class CalendarEndpoint extends Endpoint {
                           ? homeAddress
                           : null,
                       transportMode: 'driving',
+                      bufferMinutes: userLocProfile?.meetingBufferMinutes ?? 0,
                       isDeleted: false,
                     ),
                   );
@@ -182,11 +186,29 @@ class CalendarEndpoint extends Endpoint {
               final local = localMap[ev.eventId];
               if (local != null) {
                 ev.id = local.id;
-                ev.startLocation = local.startLocation ?? ev.startLocation;
+                final localStart = local.startLocation?.trim();
+                if (localStart != null && localStart.isNotEmpty) {
+                  ev.startLocation = localStart;
+                } else if (homeAddress != null && homeAddress.isNotEmpty) {
+                  ev.startLocation = homeAddress;
+                } else {
+                  ev.startLocation = null;
+                }
                 ev.transportMode = local.transportMode ?? 'driving';
+                ev.bufferMinutes =
+                    local.bufferMinutes ??
+                    userLocProfile?.meetingBufferMinutes ??
+                    0;
                 ev.isDeleted = false;
                 await CalendarEvent.db.updateRow(session, ev);
               } else {
+                if (ev.startLocation == null ||
+                    ev.startLocation!.trim().isEmpty) {
+                  if (homeAddress != null && homeAddress.isNotEmpty) {
+                    ev.startLocation = homeAddress;
+                  }
+                }
+                ev.bufferMinutes ??= userLocProfile?.meetingBufferMinutes ?? 0;
                 final inserted = await CalendarEvent.db.insertRow(session, ev);
                 ev.id = inserted.id;
               }
@@ -231,6 +253,16 @@ class CalendarEndpoint extends Endpoint {
           orderBy: (t) => t.startTime,
         );
         allEvents = dbEvents;
+      }
+
+      final profileBufferMinutes = userLocProfile?.meetingBufferMinutes ?? 0;
+      for (var ev in allEvents) {
+        if (homeAddress != null && homeAddress.isNotEmpty) {
+          if (ev.startLocation == null || ev.startLocation!.trim().isEmpty) {
+            ev.startLocation = homeAddress;
+          }
+        }
+        ev.bufferMinutes ??= profileBufferMinutes;
       }
 
       // Filter by requested time window
@@ -297,6 +329,17 @@ class CalendarEndpoint extends Endpoint {
 
       // Always update local DB
       event.userId = userId;
+      final userLocProfile = await UserLocationProfile.db.findFirstRow(
+        session,
+        where: (t) => t.authUserId.equals(userId),
+      );
+      if (event.startLocation == null || event.startLocation!.trim().isEmpty) {
+        final homeAddress = userLocProfile?.homeAddress.trim();
+        if (homeAddress != null && homeAddress.isNotEmpty) {
+          event.startLocation = homeAddress;
+        }
+      }
+      event.bufferMinutes ??= userLocProfile?.meetingBufferMinutes ?? 0;
       final existingEvent = await CalendarEvent.db.findFirstRow(
         session,
         where: (t) => t.eventId.equals(event.eventId) & t.userId.equals(userId),

@@ -25,7 +25,9 @@ import '../services/sms_notification_service.dart';
 import 'about_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onProfileUpdated;
+
+  const ProfileScreen({super.key, this.onProfileUpdated});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -87,6 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
+              duration: Duration(seconds: 5),
               content: Text('Session expired. Please sign in again.'),
             ),
           );
@@ -107,6 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            duration: Duration(seconds: 5),
             content: Text(
               'Please enter a valid 10-digit phone number (e.g. 333-333-3333).',
             ),
@@ -128,9 +132,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       await ProfilePreferences.saveUserName(_nameController.text.trim());
       await ProfilePreferences.savePhoneNumber(_phoneController.text);
+      widget.onProfileUpdated?.call();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile saved!')),
+          const SnackBar(
+            duration: Duration(seconds: 5),
+            content: Text('Profile saved!'),
+          ),
         );
       }
     } catch (e) {
@@ -138,6 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            duration: Duration(seconds: 5),
             content: Text('Error saving profile. Are you logged in?'),
           ),
         );
@@ -156,6 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            duration: Duration(seconds: 5),
             content: Text(
               'Please enter a valid 10-digit phone number (e.g. 333-333-3333) before trying SMS.',
             ),
@@ -198,7 +208,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint('Error signing out: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to sign out.')),
+          const SnackBar(
+            duration: Duration(seconds: 5),
+            content: Text('Failed to sign out.'),
+          ),
         );
       }
       setState(() => _isLoading = false);

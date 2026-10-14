@@ -26,6 +26,7 @@ import '../theme/app_theme.dart';
 class InlineEventEditor extends StatefulWidget {
   final CalendarEvent? event;
   final String? defaultStartLocation;
+  final int? defaultBufferMinutes;
   final ValueChanged<CalendarEvent> onSave;
   final VoidCallback onCancel;
   final VoidCallback? onDelete;
@@ -36,6 +37,7 @@ class InlineEventEditor extends StatefulWidget {
     super.key,
     this.event,
     this.defaultStartLocation,
+    this.defaultBufferMinutes,
     required this.onSave,
     required this.onCancel,
     this.onDelete,
@@ -55,6 +57,7 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
   late String _transportMode;
   late DateTime _startTime;
   late DateTime _endTime;
+  int _bufferMinutes = 0;
 
   String? _selectedPerson;
   List<String> _personOptions = [];
@@ -65,9 +68,16 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
   @override
   void initState() {
     super.initState();
+    _bufferMinutes =
+        widget.event?.bufferMinutes ?? widget.defaultBufferMinutes ?? 0;
     _titleController = TextEditingController(text: widget.event?.title ?? '');
-    final initialStart =
-        widget.event?.startLocation ?? widget.defaultStartLocation ?? '';
+    final eventStart = widget.event?.startLocation?.trim();
+    final defaultStart = widget.defaultStartLocation?.trim();
+    final initialStart = (eventStart != null && eventStart.isNotEmpty)
+        ? eventStart
+        : (defaultStart != null && defaultStart.isNotEmpty)
+        ? defaultStart
+        : '';
     _startLocationController = TextEditingController(text: initialStart);
     _locationController = TextEditingController(
       text: widget.event?.location ?? '',
@@ -82,7 +92,7 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
         widget.event?.endTime.toLocal() ??
         _startTime.add(const Duration(hours: 1));
 
-    if (_startLocationController.text.isEmpty) {
+    if (_startLocationController.text.trim().isEmpty) {
       _loadDefaultHomeAddress();
     } else if (_locationController.text.isNotEmpty) {
       _calculateTravelTime();
@@ -123,10 +133,10 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
   Future<void> _loadDefaultHomeAddress() async {
     try {
       final profile = await client.profile.getProfile();
-      if (profile != null && profile.homeAddress.isNotEmpty && mounted) {
-        if (_startLocationController.text.isEmpty) {
+      if (profile != null && profile.homeAddress.trim().isNotEmpty && mounted) {
+        if (_startLocationController.text.trim().isEmpty) {
           setState(() {
-            _startLocationController.text = profile.homeAddress;
+            _startLocationController.text = profile.homeAddress.trim();
           });
         }
         if (_locationController.text.isNotEmpty && _travelMinutes == null) {
@@ -257,6 +267,83 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
     }
   }
 
+  Future<void> _showAdjustBufferDialog(BuildContext context) async {
+    final controller = TextEditingController(
+      text: _bufferMinutes.toString(),
+    );
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: Text(
+            'Adjust Buffer Time',
+            style: GoogleFonts.fredoka(fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter extra padding time before this meeting:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.75),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Buffer Minutes',
+                  suffixText: 'mins',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                children: [0, 5, 10, 15, 20, 30].map((mins) {
+                  return ActionChip(
+                    label: Text('${mins}m'),
+                    onPressed: () {
+                      controller.text = mins.toString();
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                if (parsed != null && parsed >= 0) {
+                  Navigator.pop(dialogCtx, parsed);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _bufferMinutes = selected;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -298,13 +385,19 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
     if (!_formKey.currentState!.validate()) return;
 
     final loc = _locationController.text.trim();
-    final startLoc = _startLocationController.text.trim();
+    var startLoc = _startLocationController.text.trim();
+    if (startLoc.isEmpty &&
+        widget.defaultStartLocation != null &&
+        widget.defaultStartLocation!.trim().isNotEmpty) {
+      startLoc = widget.defaultStartLocation!.trim();
+    }
     final savedEvent =
         widget.event?.copyWith(
           title: _titleController.text.trim(),
           location: loc.isNotEmpty ? loc : null,
           startLocation: startLoc.isNotEmpty ? startLoc : null,
           transportMode: _transportMode,
+          bufferMinutes: _bufferMinutes,
           startTime: _startTime.toUtc(),
           endTime: _endTime.toUtc(),
         ) ??
@@ -314,6 +407,7 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
           location: loc.isNotEmpty ? loc : null,
           startLocation: startLoc.isNotEmpty ? startLoc : null,
           transportMode: _transportMode,
+          bufferMinutes: _bufferMinutes,
           startTime: _startTime.toUtc(),
           endTime: _endTime.toUtc(),
         );
@@ -1065,64 +1159,127 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
                   ),
                 ),
 
-                // Estimated Travel Time
-                if (_isCalculatingTravel)
-                  Text(
-                    'Calculating...',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  )
-                else if (_travelMinutes != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                // Estimated Travel Time & Buffer Time
+                Flexible(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 15,
-                        color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$_travelMinutes mins commute',
-                        style: GoogleFonts.fredoka(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      if (widget.allowAdjustTravelTime) ...[
-                        const SizedBox(width: 6),
-                        Tooltip(
-                          message: 'Adjust commute time',
-                          child: InkWell(
-                            onTap: () => _showAdjustTravelDialog(context),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: Icon(
-                                Icons.edit_outlined,
-                                size: 15,
-                                color: colorScheme.primary,
+                      if (_isCalculatingTravel)
+                        Text(
+                          'Calculating...',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        )
+                      else if (_travelMinutes != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.timer_outlined,
+                              size: 15,
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.7,
                               ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_travelMinutes mins commute',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            if (widget.allowAdjustTravelTime) ...[
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: 'Adjust commute time',
+                                child: InkWell(
+                                  onTap: () => _showAdjustTravelDialog(context),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: Icon(
+                                      Icons.edit_outlined,
+                                      size: 15,
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
+                      else
+                        Text(
+                          _locationController.text.isEmpty
+                              ? 'Enter destination'
+                              : 'Set commute time',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 12,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+
+                      // Buffer time chip
+                      Tooltip(
+                        message: 'Adjust buffer time',
+                        child: InkWell(
+                          onTap: () => _showAdjustBufferDialog(context),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondary.withValues(
+                                alpha: isDark ? 0.25 : 0.15,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colorScheme.secondary.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.hourglass_empty_rounded,
+                                  size: 12,
+                                  color: colorScheme.secondary,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '+${_bufferMinutes}m buffer',
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 11,
+                                  color: colorScheme.primary,
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  )
-                else
-                  Text(
-                    _locationController.text.isEmpty
-                        ? 'Enter destination'
-                        : 'Set commute time',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
                   ),
+                ),
               ],
             ),
           ),

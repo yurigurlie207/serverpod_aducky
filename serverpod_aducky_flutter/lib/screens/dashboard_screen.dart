@@ -189,9 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       try {
         final profile = await client.profile.getProfile();
         if (profile != null) {
-          if (profile.homeAddress.isNotEmpty) {
-            _homeAddress = profile.homeAddress;
-          }
+          _homeAddress = profile.homeAddress.trim();
           _meetingBufferMinutes = profile.meetingBufferMinutes ?? 0;
         }
       } catch (_) {}
@@ -217,10 +215,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _isAddingEvent = false;
           if (_homeAddress != null && _homeAddress!.isNotEmpty) {
             for (var ev in _events) {
-              if (ev.startLocation == null || ev.startLocation!.isEmpty) {
+              if (ev.startLocation == null ||
+                  ev.startLocation!.trim().isEmpty) {
                 ev.startLocation = _homeAddress;
               }
             }
+          }
+          for (var ev in _events) {
+            ev.bufferMinutes ??= _meetingBufferMinutes;
           }
         });
 
@@ -244,7 +246,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SnackBar(
             content: Text('Failed to load events: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 8),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -472,6 +474,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (!launched && mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
+                                      duration: Duration(seconds: 5),
                                       content: Text(
                                         'Could not open Google Maps.',
                                       ),
@@ -481,6 +484,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
+                                    duration: Duration(seconds: 5),
                                     content: Text(
                                       'Add a start and end location to get Google Maps directions.',
                                     ),
@@ -537,10 +541,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: Colors.white,
                             ),
                           ),
-                          if (_meetingBufferMinutes > 0) ...[
+                          if ((event.bufferMinutes ?? _meetingBufferMinutes) >
+                              0) ...[
                             const SizedBox(width: 6),
                             Text(
-                              '(+$_meetingBufferMinutes min buffer)',
+                              '(+${event.bufferMinutes ?? _meetingBufferMinutes} min buffer)',
                               style: GoogleFonts.fredoka(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -601,7 +606,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         !isAllDay && !startUtc.isAfter(nowUtc) && endUtc.isAfter(nowUtc);
 
     final travelMins = _travelMinutes ?? 0;
-    final totalBufferMinutes = travelMins + _meetingBufferMinutes;
+    final bufferMins = nextEvent.bufferMinutes ?? _meetingBufferMinutes;
+    final totalBufferMinutes = travelMins + bufferMins;
     final leaveByTimeUtc = startUtc.subtract(
       Duration(minutes: totalBufferMinutes),
     );
@@ -899,6 +905,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .where((e) => !e.isDeleted)
           .toList();
       updatedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+      if (_homeAddress != null && _homeAddress!.isNotEmpty) {
+        for (var ev in updatedEvents) {
+          if (ev.startLocation == null || ev.startLocation!.trim().isEmpty) {
+            ev.startLocation = _homeAddress;
+          }
+        }
+      }
 
       setState(() {
         _events = updatedEvents;
@@ -927,6 +940,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 5),
             content: Text(
               'Claude Error: $e',
               style: GoogleFonts.fredoka(),
@@ -966,6 +980,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: const Duration(seconds: 5),
           content: Text(
             'Reverted AI Assist changes.',
             style: GoogleFonts.fredoka(),
@@ -1295,6 +1310,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                               ),
+                              Builder(
+                                builder: (context) {
+                                  final seqBuffer =
+                                      event.bufferMinutes ??
+                                      _meetingBufferMinutes;
+                                  if (seqBuffer <= 0) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 3,
+                                        height: 3,
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white.withValues(
+                                            alpha: isPast ? 0.25 : 0.45,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFD54F)
+                                              .withValues(
+                                                alpha: isPast ? 0.08 : 0.16,
+                                              ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD54F)
+                                                .withValues(
+                                                  alpha: isPast ? 0.14 : 0.30,
+                                                ),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '+${seqBuffer}m buffer',
+                                          style: GoogleFonts.fredoka(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isPast
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.40,
+                                                  )
+                                                : const Color(0xFFFFD54F),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
                               Container(
                                 width: 3,
                                 height: 3,
@@ -1331,6 +1408,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             context,
                                           ).showSnackBar(
                                             const SnackBar(
+                                              duration: Duration(seconds: 5),
                                               content: Text(
                                                 'Could not open Google Maps.',
                                               ),
@@ -1342,6 +1420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           context,
                                         ).showSnackBar(
                                           const SnackBar(
+                                            duration: Duration(seconds: 5),
                                             content: Text(
                                               'Add a start and end location to get Google Maps directions.',
                                             ),
@@ -1468,6 +1547,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: InlineEventEditor(
                 event: event,
                 defaultStartLocation: _homeAddress,
+                defaultBufferMinutes: _meetingBufferMinutes,
                 allowEditEndTime: !isCurrentEventPage,
                 onSave: (savedEvent) async {
                   _closeEventEditor();
@@ -1619,9 +1699,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(
+                      onProfileUpdated: () {
+                        _loadEvents();
+                      },
+                    ),
+                  ),
                 );
                 await _loadAccountUserName();
+                await _loadEvents();
               },
             ),
             Center(
@@ -2415,7 +2502,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (isAllDay || isOngoing) return;
 
     final travelMins = _travelMinutes ?? 0;
-    final totalBufferMins = travelMins + _meetingBufferMinutes;
+    final bufferMins = nextEvent.bufferMinutes ?? _meetingBufferMinutes;
+    final totalBufferMins = travelMins + bufferMins;
     final leaveByTimeUtc = startUtc.subtract(
       Duration(minutes: totalBufferMins),
     );
@@ -2506,6 +2594,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 5),
             content: Text(
               'AI Assist: No "all day" or commute events found to reorganize.',
               style: GoogleFonts.fredoka(),
@@ -2530,8 +2619,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         startTime: event.startTime,
         endTime: event.startTime,
         location: event.location,
-        startLocation: event.startLocation,
+        startLocation:
+            (event.startLocation != null &&
+                event.startLocation!.trim().isNotEmpty)
+            ? event.startLocation
+            : _homeAddress,
         transportMode: event.transportMode,
+        bufferMinutes: event.bufferMinutes ?? _meetingBufferMinutes,
         isDeleted: false,
       );
 
@@ -2543,8 +2637,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         startTime: event.endTime,
         endTime: event.endTime,
         location: event.location,
-        startLocation: event.startLocation,
+        startLocation:
+            (event.startLocation != null &&
+                event.startLocation!.trim().isNotEmpty)
+            ? event.startLocation
+            : _homeAddress,
         transportMode: event.transportMode,
+        bufferMinutes: event.bufferMinutes ?? _meetingBufferMinutes,
         isDeleted: false,
       );
 
@@ -2584,6 +2683,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppTheme.darkTeal,
+          duration: const Duration(seconds: 5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(

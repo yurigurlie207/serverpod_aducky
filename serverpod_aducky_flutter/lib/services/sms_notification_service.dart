@@ -76,7 +76,7 @@ class SmsNotificationService {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppTheme.darkTeal,
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
@@ -179,6 +179,7 @@ class SmsNotificationService {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppTheme.darkTeal,
+        duration: const Duration(seconds: 5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(

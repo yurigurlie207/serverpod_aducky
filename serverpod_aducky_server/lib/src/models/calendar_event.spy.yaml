@@ -9,4 +9,5 @@ fields:
   location: String?
   startLocation: String?
   transportMode: String?, default='driving'
+  bufferMinutes: int?, default=0
   isDeleted: bool, default=false

@@ -24,8 +24,10 @@ abstract class CalendarEvent
     this.location,
     this.startLocation,
     String? transportMode,
+    int? bufferMinutes,
     bool? isDeleted,
   }) : transportMode = transportMode ?? 'driving',
+       bufferMinutes = bufferMinutes ?? 0,
        isDeleted = isDeleted ?? false;
 
   factory CalendarEvent({
@@ -38,6 +40,7 @@ abstract class CalendarEvent
     String? location,
     String? startLocation,
     String? transportMode,
+    int? bufferMinutes,
     bool? isDeleted,
   }) = _CalendarEventImpl;
 
@@ -58,6 +61,7 @@ abstract class CalendarEvent
       location: jsonSerialization['location'] as String?,
       startLocation: jsonSerialization['startLocation'] as String?,
       transportMode: jsonSerialization['transportMode'] as String?,
+      bufferMinutes: jsonSerialization['bufferMinutes'] as int?,
       isDeleted: jsonSerialization['isDeleted'] == null
           ? null
           : _isc.BoolJsonExtension.fromJson(jsonSerialization['isDeleted']),
@@ -85,6 +89,8 @@ abstract class CalendarEvent
 
   String? transportMode;
 
+  int? bufferMinutes;
+
   bool isDeleted;
 
   /// Returns a shallow copy of this [CalendarEvent]
@@ -100,6 +106,7 @@ abstract class CalendarEvent
     String? location,
     String? startLocation,
     String? transportMode,
+    int? bufferMinutes,
     bool? isDeleted,
   });
   @override
@@ -115,6 +122,7 @@ abstract class CalendarEvent
       if (location != null) 'location': location,
       if (startLocation != null) 'startLocation': startLocation,
       if (transportMode != null) 'transportMode': transportMode,
+      if (bufferMinutes != null) 'bufferMinutes': bufferMinutes,
       'isDeleted': isDeleted,
     };
   }
@@ -132,6 +140,7 @@ abstract class CalendarEvent
       if (location != null) 'location': location,
       if (startLocation != null) 'startLocation': startLocation,
       if (transportMode != null) 'transportMode': transportMode,
+      if (bufferMinutes != null) 'bufferMinutes': bufferMinutes,
       'isDeleted': isDeleted,
     };
   }
@@ -155,6 +164,7 @@ class _CalendarEventImpl extends CalendarEvent {
     String? location,
     String? startLocation,
     String? transportMode,
+    int? bufferMinutes,
     bool? isDeleted,
   }) : super._(
          id: id,
@@ -166,6 +176,7 @@ class _CalendarEventImpl extends CalendarEvent {
          location: location,
          startLocation: startLocation,
          transportMode: transportMode,
+         bufferMinutes: bufferMinutes,
          isDeleted: isDeleted,
        );
 
@@ -183,6 +194,7 @@ class _CalendarEventImpl extends CalendarEvent {
     Object? location = _Undefined,
     Object? startLocation = _Undefined,
     Object? transportMode = _Undefined,
+    Object? bufferMinutes = _Undefined,
     bool? isDeleted,
   }) {
     return CalendarEvent(
@@ -199,6 +211,7 @@ class _CalendarEventImpl extends CalendarEvent {
       transportMode: transportMode is String?
           ? transportMode
           : this.transportMode,
+      bufferMinutes: bufferMinutes is int? ? bufferMinutes : this.bufferMinutes,
       isDeleted: isDeleted ?? this.isDeleted,
     );
   }

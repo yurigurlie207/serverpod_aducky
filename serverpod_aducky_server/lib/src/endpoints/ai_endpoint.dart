@@ -224,6 +224,9 @@ User Request:
             location: item['location']?.toString(),
             startLocation: item['startLocation']?.toString(),
             transportMode: item['transportMode']?.toString() ?? 'driving',
+            bufferMinutes: item['bufferMinutes'] is int
+                ? item['bufferMinutes'] as int
+                : null,
             isDeleted: item['isDeleted'] == true,
           ),
         );
@@ -264,6 +267,7 @@ User Request:
             location: e.location,
             startLocation: e.startLocation,
             transportMode: e.transportMode,
+            bufferMinutes: e.bufferMinutes,
             isDeleted: e.isDeleted,
           ),
         )

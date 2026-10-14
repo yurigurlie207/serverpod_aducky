@@ -45,22 +45,81 @@ class ProfileEndpoint extends Endpoint {
     }
 
     var profile = await getProfile(session);
+    final String oldHomeAddress = profile?.homeAddress.trim() ?? '';
+    final String newHomeAddress = homeAddress.trim();
+    final int effectiveBufferMinutes =
+        meetingBufferMinutes ?? profile?.meetingBufferMinutes ?? 0;
+
+    final UserLocationProfile savedProfile;
     if (profile == null) {
       profile = UserLocationProfile(
         authUserId: authUserId,
         homeAddress: homeAddress,
         homeLat: homeLat,
         homeLng: homeLng,
-        meetingBufferMinutes: meetingBufferMinutes ?? 0,
+        meetingBufferMinutes: effectiveBufferMinutes,
       );
-      return await UserLocationProfile.db.insertRow(session, profile);
+      savedProfile = await UserLocationProfile.db.insertRow(session, profile);
     } else {
       profile.homeAddress = homeAddress;
       profile.homeLat = homeLat;
       profile.homeLng = homeLng;
-      profile.meetingBufferMinutes =
-          meetingBufferMinutes ?? profile.meetingBufferMinutes ?? 0;
-      return await UserLocationProfile.db.updateRow(session, profile);
+      profile.meetingBufferMinutes = effectiveBufferMinutes;
+      savedProfile = await UserLocationProfile.db.updateRow(session, profile);
     }
+
+    // Update all events for this user:
+    // 1. Update bufferMinutes for all user events to match updated profile buffer time
+    // 2. Update default starting location if home address was updated
+    final userEvents = await CalendarEvent.db.find(
+      session,
+      where: (t) => t.userId.equals(authUserId),
+    );
+    for (var ev in userEvents) {
+      bool changed = false;
+      if (newHomeAddress.isNotEmpty) {
+        final currentStart = ev.startLocation?.trim();
+        final hasNoStart = currentStart == null || currentStart.isEmpty;
+        final hadOldDefault =
+            oldHomeAddress.isNotEmpty && currentStart == oldHomeAddress;
+        if (hasNoStart || hadOldDefault) {
+          ev.startLocation = newHomeAddress;
+          changed = true;
+        }
+      } else if (oldHomeAddress.isNotEmpty) {
+        final currentStart = ev.startLocation?.trim();
+        if (currentStart == oldHomeAddress) {
+          ev.startLocation = null;
+          changed = true;
+        }
+      }
+
+      if (ev.bufferMinutes != effectiveBufferMinutes) {
+        ev.bufferMinutes = effectiveBufferMinutes;
+        changed = true;
+      }
+
+      if (changed) {
+        await CalendarEvent.db.updateRow(session, ev);
+      }
+    }
+
+    // Invalidate local memory cache of Google events so all events use updated buffer and location
+    String? email;
+    try {
+      final userProfile = await session.authenticated?.userProfile(session);
+      email = userProfile?.email?.trim();
+    } catch (_) {}
+    await session.caches.local.invalidateKey(
+      'cached_google_events_${authUserId.toString()}',
+    );
+    if (email != null && email.isNotEmpty) {
+      await session.caches.local.invalidateKey('cached_google_events_$email');
+      await session.caches.local.invalidateKey(
+        'cached_google_events_${email.toLowerCase()}',
+      );
+    }
+
+    return savedProfile;
   }
 }

@@ -107,6 +107,13 @@ class Protocol extends _is.DatabaseSerializationManager {
           columnDefault: '\'driving\'',
         ),
         _isp.ColumnDefinition(
+          name: 'bufferMinutes',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+          columnDefault: '0',
+        ),
+        _isp.ColumnDefinition(
           name: 'isDeleted',
           columnType: _isp.ColumnType.boolean,
           isNullable: false,
