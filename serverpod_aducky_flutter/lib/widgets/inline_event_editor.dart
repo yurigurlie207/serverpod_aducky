@@ -27,7 +27,11 @@ class InlineEventEditor extends StatefulWidget {
   final CalendarEvent? event;
   final String? defaultStartLocation;
   final int? defaultBufferMinutes;
+  final int? initialTravelMinutes;
+  final bool showPersonSelector;
   final ValueChanged<CalendarEvent> onSave;
+  final void Function(CalendarEvent event, int? travelMinutes)?
+  onSaveWithTravel;
   final VoidCallback onCancel;
   final VoidCallback? onDelete;
   final bool allowAdjustTravelTime;
@@ -38,7 +42,10 @@ class InlineEventEditor extends StatefulWidget {
     this.event,
     this.defaultStartLocation,
     this.defaultBufferMinutes,
+    this.initialTravelMinutes,
+    this.showPersonSelector = true,
     required this.onSave,
+    this.onSaveWithTravel,
     required this.onCancel,
     this.onDelete,
     this.allowAdjustTravelTime = true,
@@ -70,6 +77,7 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
     super.initState();
     _bufferMinutes =
         widget.event?.bufferMinutes ?? widget.defaultBufferMinutes ?? 0;
+    _travelMinutes = widget.initialTravelMinutes;
     _titleController = TextEditingController(text: widget.event?.title ?? '');
     final eventStart = widget.event?.startLocation?.trim();
     final defaultStart = widget.defaultStartLocation?.trim();
@@ -85,19 +93,32 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
     _transportMode = widget.event?.transportMode ?? 'driving';
 
     final now = DateTime.now();
-    _startTime =
+    final rawStart =
         widget.event?.startTime.toLocal() ??
         DateTime(now.year, now.month, now.day, now.hour + 1);
-    _endTime =
+    final rawEnd =
         widget.event?.endTime.toLocal() ??
-        _startTime.add(const Duration(hours: 1));
+        rawStart.add(const Duration(hours: 1));
+
+    // If an all-day event is being edited, normalize it to a 1-hour timed event
+    final isAllDay =
+        widget.event != null &&
+        (rawEnd.difference(rawStart).inHours >= 20 ||
+            (rawStart.hour == 0 &&
+                rawStart.minute == 0 &&
+                rawEnd.difference(rawStart).inHours >= 12));
+
+    _startTime = rawStart;
+    _endTime = isAllDay ? _startTime.add(const Duration(hours: 1)) : rawEnd;
 
     if (_startLocationController.text.trim().isEmpty) {
       _loadDefaultHomeAddress();
-    } else if (_locationController.text.isNotEmpty) {
+    } else if (_locationController.text.isNotEmpty && _travelMinutes == null) {
       _calculateTravelTime();
     }
-    _loadPersonOptions();
+    if (widget.showPersonSelector) {
+      _loadPersonOptions();
+    }
   }
 
   Future<void> _loadPersonOptions() async {
@@ -372,11 +393,16 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
       );
       if (isStart) {
         _startTime = newDateTime;
-        if (_startTime.isAfter(_endTime)) {
+        // If end time was >= 20 hours away (all-day event) or start is at/after end, set end to start + 1h
+        if (_endTime.difference(_startTime).inHours >= 20 ||
+            !_endTime.isAfter(_startTime)) {
           _endTime = _startTime.add(const Duration(hours: 1));
         }
       } else {
         _endTime = newDateTime;
+        if (!_endTime.isAfter(_startTime)) {
+          _startTime = _endTime.subtract(const Duration(hours: 1));
+        }
       }
     });
   }
@@ -391,6 +417,13 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
         widget.defaultStartLocation!.trim().isNotEmpty) {
       startLoc = widget.defaultStartLocation!.trim();
     }
+
+    var effectiveEnd = _endTime;
+    if (effectiveEnd.difference(_startTime).inHours >= 20 ||
+        !effectiveEnd.isAfter(_startTime)) {
+      effectiveEnd = _startTime.add(const Duration(hours: 1));
+    }
+
     final savedEvent =
         widget.event?.copyWith(
           title: _titleController.text.trim(),
@@ -399,7 +432,7 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
           transportMode: _transportMode,
           bufferMinutes: _bufferMinutes,
           startTime: _startTime.toUtc(),
-          endTime: _endTime.toUtc(),
+          endTime: effectiveEnd.toUtc(),
         ) ??
         CalendarEvent(
           eventId: 'local_${DateTime.now().millisecondsSinceEpoch}',
@@ -409,11 +442,14 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
           transportMode: _transportMode,
           bufferMinutes: _bufferMinutes,
           startTime: _startTime.toUtc(),
-          endTime: _endTime.toUtc(),
+          endTime: effectiveEnd.toUtc(),
         );
 
     if (_selectedPerson != null && _selectedPerson!.isNotEmpty) {
       ProfilePreferences.saveEventPerson(savedEvent.eventId, _selectedPerson!);
+    }
+    if (widget.onSaveWithTravel != null) {
+      widget.onSaveWithTravel!(savedEvent, _travelMinutes);
     }
     widget.onSave(savedEvent);
   }
@@ -477,39 +513,41 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
                 ? 'Title is required'
                 : null,
           ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            key: ValueKey(_selectedPerson),
-            initialValue: _personOptions.contains(_selectedPerson)
-                ? _selectedPerson
-                : (_personOptions.isNotEmpty ? _personOptions.first : null),
-            decoration: const InputDecoration(
-              labelText: 'Person',
-              isDense: true,
-              prefixIcon: Icon(Icons.person_outline, size: 20),
-              border: OutlineInputBorder(),
-            ),
-            icon: const Icon(Icons.arrow_drop_down),
-            items: _personOptions.map((person) {
-              return DropdownMenuItem<String>(
-                value: person,
-                child: Text(
-                  person,
-                  style: GoogleFonts.fredoka(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+          if (widget.showPersonSelector) ...[
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              key: ValueKey(_selectedPerson),
+              initialValue: _personOptions.contains(_selectedPerson)
+                  ? _selectedPerson
+                  : (_personOptions.isNotEmpty ? _personOptions.first : null),
+              decoration: const InputDecoration(
+                labelText: 'Person',
+                isDense: true,
+                prefixIcon: Icon(Icons.person_outline, size: 20),
+                border: OutlineInputBorder(),
+              ),
+              icon: const Icon(Icons.arrow_drop_down),
+              items: _personOptions.map((person) {
+                return DropdownMenuItem<String>(
+                  value: person,
+                  child: Text(
+                    person,
+                    style: GoogleFonts.fredoka(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedPerson = val;
-                });
-              }
-            },
-          ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _selectedPerson = val;
+                  });
+                }
+              },
+            ),
+          ],
           const SizedBox(height: 12),
 
           // Start and End Time Sliding Scale with start and end nodes to drag
@@ -658,9 +696,11 @@ class _InlineEventEditorState extends State<InlineEventEditor> {
                               sMin,
                             );
                             final duration = _endTime.difference(_startTime);
-                            final effectiveDuration = duration > Duration.zero
+                            final effectiveDuration =
+                                (duration > Duration.zero &&
+                                    duration.inHours < 20)
                                 ? duration
-                                : const Duration(minutes: 30);
+                                : const Duration(hours: 1);
                             setState(() {
                               _startTime = newStart;
                               _endTime = _startTime.add(effectiveDuration);

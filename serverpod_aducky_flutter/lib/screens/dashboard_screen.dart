@@ -361,7 +361,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required ColorScheme colorScheme,
     required bool isDark,
     required DateTime leaveByTimeUtc,
+    required Duration durationRemaining,
+    required bool isOngoing,
   }) {
+    String countdownBadge;
+    if (isOngoing) {
+      countdownBadge = 'In progress';
+    } else if (isLate) {
+      final lateMins = durationRemaining.abs().inMinutes;
+      countdownBadge = lateMins > 0 ? '$lateMins min late' : 'Time to leave!';
+    } else {
+      final mins = durationRemaining.inMinutes;
+      if (mins >= 60) {
+        final hrs = mins ~/ 60;
+        final remMins = mins % 60;
+        countdownBadge = remMins > 0 ? 'in ${hrs}h ${remMins}m' : 'in ${hrs}h';
+      } else if (mins > 0) {
+        countdownBadge = 'in ${mins}m';
+      } else {
+        countdownBadge = 'in <1m';
+      }
+    }
     final eventStart = event.startLocation?.trim() ?? '';
     final origin = eventStart.isNotEmpty
         ? eventStart
@@ -497,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()}',
+                              'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()} ($countdownBadge)',
                               style: GoogleFonts.fredoka(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -860,6 +880,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       colorScheme: colorScheme,
                       isDark: isDark,
                       leaveByTimeUtc: leaveByTimeUtc,
+                      durationRemaining: durationRemaining,
+                      isOngoing: isOngoing,
                     ),
                   ),
                 ),
@@ -1659,7 +1681,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 event: event,
                 defaultStartLocation: _homeAddress,
                 defaultBufferMinutes: _meetingBufferMinutes,
-                allowEditEndTime: !isCurrentEventPage,
+                allowEditEndTime: true,
                 onSave: (savedEvent) async {
                   _closeEventEditor();
                   if (event == null) {

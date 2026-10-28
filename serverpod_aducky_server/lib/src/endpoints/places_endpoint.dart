@@ -5,7 +5,7 @@ import '../generated/protocol.dart'; // We will create a model for PlaceSuggesti
 
 class PlacesEndpoint extends Endpoint {
   @override
-  bool get requireLogin => true;
+  bool get requireLogin => false;
 
   Future<List<PlaceSuggestion>> getSuggestions(
     Session session,

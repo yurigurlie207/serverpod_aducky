@@ -23,6 +23,7 @@ import 'package:serverpod_aducky_client/serverpod_aducky_client.dart';
 import '../client.dart';
 import '../services/maps_launcher_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/inline_event_editor.dart';
 import '../widgets/pomodoro_digital_timer_widget.dart';
 import '../widgets/share_countdown_dialog.dart';
 import '../widgets/time_timer_widget.dart';
@@ -35,9 +36,8 @@ class SingleEventScreen extends StatefulWidget {
 }
 
 class _SingleEventScreenState extends State<SingleEventScreen> {
-  bool _isConfigured = false;
+  bool _isConfigured = true;
   bool _isEditing = false;
-  bool _isCalculatingTravel = false;
 
   final TextEditingController _titleController = TextEditingController(
     text: 'My Focus Event',
@@ -78,41 +78,11 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
     super.dispose();
   }
 
-  Future<void> _pickTime(bool isStart) async {
-    final initial = isStart ? _startTime : _endTime;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-
-    if (picked != null) {
-      final now = DateTime.now();
-      setState(() {
-        final newDate = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          picked.hour,
-          picked.minute,
-        );
-        if (isStart) {
-          _startTime = newDate;
-          if (_startTime.isAfter(_endTime)) {
-            _endTime = _startTime.add(const Duration(hours: 1));
-          }
-        } else {
-          _endTime = newDate;
-        }
-      });
-    }
-  }
-
   Future<void> _calculateTravel() async {
     final start = _startLocationController.text.trim();
     final dest = _destinationController.text.trim();
     if (start.isEmpty || dest.isEmpty) return;
 
-    setState(() => _isCalculatingTravel = true);
     try {
       final result = await client.travel.getTravelTime(
         origin: start,
@@ -122,14 +92,9 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
       if (mounted && result.durationMinutes > 0) {
         setState(() {
           _travelMinutes = result.durationMinutes;
-          _isCalculatingTravel = false;
         });
-      } else {
-        setState(() => _isCalculatingTravel = false);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isCalculatingTravel = false);
-    }
+    } catch (_) {}
   }
 
   void _switchTimerPage(int index) {
@@ -231,377 +196,86 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 540),
+          constraints: const BoxConstraints(maxWidth: 600),
           child: !_isConfigured || _isEditing
-              ? _buildConfigForm(colorScheme, isDark)
+              ? _buildCurrentEventEditor(colorScheme, isDark)
               : _buildLiveCountdown(colorScheme, isDark),
         ),
       ),
     );
   }
 
-  Widget _buildConfigForm(ColorScheme colorScheme, bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Banner
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.goldenYellow.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppTheme.goldenYellow.withValues(alpha: 0.4),
+  Widget _buildCurrentEventEditor(ColorScheme colorScheme, bool isDark) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Card(
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            color: Colors.white.withValues(alpha: 0.16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: Colors.white.withValues(alpha: 0.28),
+                width: 1,
               ),
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  color: AppTheme.burntOrange,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'No account needed! Set up your current event to get a real-time countdown dial with travel & buffer time.',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 13,
-                      color: isDark ? Colors.white : AppTheme.deepBrown,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Title
-          TextFormField(
-            controller: _titleController,
-            decoration: InputDecoration(
-              labelText: 'Event Name',
-              hintText: 'e.g. Doctor appointment, Flight, Coffee with Sarah',
-              prefixIcon: const Icon(Icons.event_note_rounded),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            style: GoogleFonts.fredoka(fontSize: 15),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Time Row
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => _pickTime(true),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: colorScheme.outline.withValues(alpha: 0.35),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Event Start',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 11,
-                            color: colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time_rounded, size: 16),
-                            const SizedBox(width: 6),
-                            Text(
-                              DateFormat(
-                                'h:mm a',
-                              ).format(_startTime).toLowerCase(),
-                              style: GoogleFonts.fredoka(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: InkWell(
-                  onTap: () => _pickTime(false),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: colorScheme.outline.withValues(alpha: 0.35),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Event End',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 11,
-                            color: colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.done_all_rounded, size: 16),
-                            const SizedBox(width: 6),
-                            Text(
-                              DateFormat(
-                                'h:mm a',
-                              ).format(_endTime).toLowerCase(),
-                              style: GoogleFonts.fredoka(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Destination
-          Autocomplete<PlaceSuggestion>(
-            initialValue: TextEditingValue(text: _destinationController.text),
-            displayStringForOption: (o) => o.description,
-            optionsBuilder: (textVal) async {
-              if (textVal.text.trim().isEmpty) return const [];
-              try {
-                return await client.places.getSuggestions(textVal.text);
-              } catch (_) {
-                return const [];
-              }
-            },
-            onSelected: (sel) {
-              _destinationController.text = sel.description;
-              _calculateTravel();
-            },
-            fieldViewBuilder: (ctx, ctrl, fn, onSubmitted) {
-              if (ctrl.text != _destinationController.text &&
-                  _destinationController.text.isNotEmpty &&
-                  ctrl.text.isEmpty) {
-                ctrl.text = _destinationController.text;
-              }
-              return TextField(
-                controller: ctrl,
-                focusNode: fn,
-                onChanged: (val) => _destinationController.text = val,
-                decoration: InputDecoration(
-                  labelText: 'Destination Location',
-                  hintText: 'e.g. 123 Main St, New York',
-                  prefixIcon: const Icon(Icons.place_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                style: GoogleFonts.fredoka(fontSize: 14),
-              );
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // Starting Location
-          Autocomplete<PlaceSuggestion>(
-            initialValue: TextEditingValue(text: _startLocationController.text),
-            displayStringForOption: (o) => o.description,
-            optionsBuilder: (textVal) async {
-              if (textVal.text.trim().isEmpty) return const [];
-              try {
-                return await client.places.getSuggestions(textVal.text);
-              } catch (_) {
-                return const [];
-              }
-            },
-            onSelected: (sel) {
-              _startLocationController.text = sel.description;
-              _calculateTravel();
-            },
-            fieldViewBuilder: (ctx, ctrl, fn, onSubmitted) {
-              if (ctrl.text != _startLocationController.text &&
-                  _startLocationController.text.isNotEmpty &&
-                  ctrl.text.isEmpty) {
-                ctrl.text = _startLocationController.text;
-              }
-              return TextField(
-                controller: ctrl,
-                focusNode: fn,
-                onChanged: (val) => _startLocationController.text = val,
-                decoration: InputDecoration(
-                  labelText: 'Starting Location (Optional)',
-                  hintText: 'e.g. Home, Office, or Current Location',
-                  prefixIcon: const Icon(Icons.my_location_rounded),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                style: GoogleFonts.fredoka(fontSize: 14),
-              );
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // Travel Mode
-          Text(
-            'Travel Mode',
-            style: GoogleFonts.fredoka(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'driving',
-                icon: Icon(Icons.directions_car, size: 16),
-                label: Text('Drive'),
-              ),
-              ButtonSegment(
-                value: 'transit',
-                icon: Icon(Icons.directions_transit, size: 16),
-                label: Text('Transit'),
-              ),
-              ButtonSegment(
-                value: 'walking',
-                icon: Icon(Icons.directions_walk, size: 16),
-                label: Text('Walk'),
-              ),
-              ButtonSegment(
-                value: 'bicycling',
-                icon: Icon(Icons.directions_bike, size: 16),
-                label: Text('Bike'),
-              ),
-            ],
-            selected: {_transportMode},
-            onSelectionChanged: (newSel) {
-              setState(() => _transportMode = newSel.first);
-              _calculateTravel();
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // Commute & Buffer Row
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Commute Time: ${_isCalculatingTravel ? '...' : '$_travelMinutes min'}',
-                      style: GoogleFonts.fredoka(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [10, 15, 20, 30, 45].map((m) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ActionChip(
-                            label: Text('${m}m'),
-                            backgroundColor: _travelMinutes == m
-                                ? AppTheme.darkTeal.withValues(alpha: 0.25)
-                                : null,
-                            onPressed: () => setState(() => _travelMinutes = m),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Buffer Time Quick Chips
-          Text(
-            'Meeting Buffer Time: $_bufferMinutes min',
-            style: GoogleFonts.fredoka(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [0, 5, 10, 15, 20, 30].map((m) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ActionChip(
-                  label: Text('${m}m'),
-                  backgroundColor: _bufferMinutes == m
-                      ? AppTheme.goldenYellow.withValues(alpha: 0.35)
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: InlineEventEditor(
+                event: CalendarEvent(
+                  eventId: 'guest_single_event',
+                  title: _titleController.text.trim().isEmpty
+                      ? 'My Focus Event'
+                      : _titleController.text.trim(),
+                  startTime: _startTime,
+                  endTime: _endTime,
+                  location: _destinationController.text.trim().isNotEmpty
+                      ? _destinationController.text.trim()
                       : null,
-                  onPressed: () => setState(() => _bufferMinutes = m),
+                  startLocation: _startLocationController.text.trim().isNotEmpty
+                      ? _startLocationController.text.trim()
+                      : null,
+                  transportMode: _transportMode,
+                  bufferMinutes: _bufferMinutes,
                 ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Start Countdown Button
-          FilledButton.icon(
-            onPressed: () {
-              setState(() {
-                _isConfigured = true;
-                _isEditing = false;
-              });
-            },
-            icon: const Icon(Icons.play_arrow_rounded, size: 20),
-            label: Text(
-              _isConfigured ? 'Update Countdown' : 'Start Live Countdown',
-              style: GoogleFonts.fredoka(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                initialTravelMinutes: _travelMinutes,
+                showPersonSelector: false,
+                allowEditEndTime: true,
+                allowAdjustTravelTime: true,
+                onSaveWithTravel: (savedEvent, travelMins) {
+                  setState(() {
+                    _titleController.text = savedEvent.title;
+                    _startTime = savedEvent.startTime.toLocal();
+                    _endTime = savedEvent.endTime.toLocal();
+                    _destinationController.text = savedEvent.location ?? '';
+                    _startLocationController.text =
+                        savedEvent.startLocation ?? '';
+                    _transportMode = savedEvent.transportMode ?? 'driving';
+                    _bufferMinutes = savedEvent.bufferMinutes ?? 10;
+                    if (travelMins != null) {
+                      _travelMinutes = travelMins;
+                    }
+                    _isEditing = false;
+                    _isConfigured = true;
+                  });
+                  if (travelMins == null) {
+                    _calculateTravel();
+                  }
+                },
+                onSave: (_) {},
+                onCancel: () {
+                  setState(() {
+                    _isEditing = false;
+                    _isConfigured = true;
+                  });
+                },
               ),
             ),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.darkTeal,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -623,6 +297,25 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
         ? endUtc.difference(nowUtc)
         : leaveByTimeUtc.difference(nowUtc);
     final bool isLate = !isOngoing && durationRemaining.isNegative;
+
+    String countdownBadge;
+    if (isOngoing) {
+      countdownBadge = 'In progress';
+    } else if (isLate) {
+      final lateMins = durationRemaining.abs().inMinutes;
+      countdownBadge = lateMins > 0 ? '$lateMins min late' : 'Time to leave!';
+    } else {
+      final mins = durationRemaining.inMinutes;
+      if (mins >= 60) {
+        final hrs = mins ~/ 60;
+        final remMins = mins % 60;
+        countdownBadge = remMins > 0 ? 'in ${hrs}h ${remMins}m' : 'in ${hrs}h';
+      } else if (mins > 0) {
+        countdownBadge = 'in ${mins}m';
+      } else {
+        countdownBadge = 'in <1m';
+      }
+    }
 
     final hasLocations =
         _startLocationController.text.trim().isNotEmpty &&
@@ -896,17 +589,17 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
                                       size: 16,
                                       color: isLate
                                           ? const Color(0xFFFF8A80)
-                                          : AppTheme.burntOrange,
+                                          : AppTheme.goldenYellow,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()}',
+                                      'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()} ($countdownBadge)',
                                       style: GoogleFonts.fredoka(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
                                         color: isLate
                                             ? const Color(0xFFFF8A80)
-                                            : AppTheme.burntOrange,
+                                            : AppTheme.goldenYellow,
                                       ),
                                     ),
                                   ],

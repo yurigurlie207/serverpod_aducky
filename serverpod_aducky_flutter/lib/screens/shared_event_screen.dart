@@ -23,6 +23,7 @@ import 'package:serverpod_aducky_client/serverpod_aducky_client.dart';
 import '../client.dart';
 import '../services/maps_launcher_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/inline_event_editor.dart';
 import '../widgets/pomodoro_digital_timer_widget.dart';
 import '../widgets/share_countdown_dialog.dart';
 import '../widgets/time_timer_widget.dart';
@@ -50,19 +51,11 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
 
   // Editing state for anyone with the guest event shared link
   bool _isEditing = false;
-  bool _isSaving = false;
-  bool _isCalculatingTravel = false;
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _startLocationController =
       TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
-
-  DateTime _editStartTime = DateTime.now().add(const Duration(hours: 1));
-  DateTime _editEndTime = DateTime.now().add(const Duration(hours: 2));
-  String _editTransportMode = 'driving';
-  int _editTravelMinutes = 15;
-  int _editBufferMinutes = 10;
 
   @override
   void initState() {
@@ -89,11 +82,6 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
     _titleController.text = event.title;
     _startLocationController.text = event.startLocation ?? '';
     _destinationController.text = event.location ?? '';
-    _editStartTime = event.startTime.toLocal();
-    _editEndTime = event.endTime.toLocal();
-    _editTransportMode = event.transportMode ?? 'driving';
-    _editTravelMinutes = event.travelMinutes ?? 0;
-    _editBufferMinutes = event.bufferMinutes ?? 0;
   }
 
   Future<void> _loadSharedEvent() async {
@@ -143,165 +131,6 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
         return Icons.directions_bike;
       default:
         return Icons.directions_car;
-    }
-  }
-
-  Future<void> _calculateTravel() async {
-    final start = _startLocationController.text.trim();
-    final dest = _destinationController.text.trim();
-    if (start.isEmpty || dest.isEmpty) return;
-
-    setState(() => _isCalculatingTravel = true);
-    try {
-      final result = await client.travel.getTravelTime(
-        origin: start,
-        destination: dest,
-        mode: _editTransportMode,
-      );
-      if (mounted && result.durationMinutes > 0) {
-        setState(() {
-          _editTravelMinutes = result.durationMinutes;
-          _isCalculatingTravel = false;
-        });
-      } else {
-        if (mounted) setState(() => _isCalculatingTravel = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isCalculatingTravel = false);
-    }
-  }
-
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _editStartTime,
-      firstDate: now.subtract(const Duration(days: 365)),
-      lastDate: now.add(const Duration(days: 365 * 2)),
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        final startHour = _editStartTime.hour;
-        final startMin = _editStartTime.minute;
-        final endHour = _editEndTime.hour;
-        final endMin = _editEndTime.minute;
-
-        _editStartTime = DateTime(
-          picked.year,
-          picked.month,
-          picked.day,
-          startHour,
-          startMin,
-        );
-        _editEndTime = DateTime(
-          picked.year,
-          picked.month,
-          picked.day,
-          endHour,
-          endMin,
-        );
-      });
-    }
-  }
-
-  Future<void> _pickTime(bool isStart) async {
-    final initial = isStart ? _editStartTime : _editEndTime;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        if (isStart) {
-          _editStartTime = DateTime(
-            _editStartTime.year,
-            _editStartTime.month,
-            _editStartTime.day,
-            picked.hour,
-            picked.minute,
-          );
-          if (_editEndTime.isBefore(_editStartTime)) {
-            _editEndTime = _editStartTime.add(const Duration(hours: 1));
-          }
-        } else {
-          _editEndTime = DateTime(
-            _editEndTime.year,
-            _editEndTime.month,
-            _editEndTime.day,
-            picked.hour,
-            picked.minute,
-          );
-        }
-      });
-    }
-  }
-
-  Future<void> _saveChanges() async {
-    if (_event == null) return;
-    final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(seconds: 5),
-          content: Text('Please enter an event title.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    try {
-      final updated = await client.share.updateSharedEvent(
-        token: widget.shareToken,
-        title: title,
-        startTime: _editStartTime.toUtc(),
-        endTime: _editEndTime.toUtc(),
-        location: _destinationController.text.trim().isNotEmpty
-            ? _destinationController.text.trim()
-            : null,
-        startLocation: _startLocationController.text.trim().isNotEmpty
-            ? _startLocationController.text.trim()
-            : null,
-        transportMode: _editTransportMode,
-        travelMinutes: _editTravelMinutes,
-        bufferMinutes: _editBufferMinutes,
-        personName: _event!.personName,
-      );
-
-      if (mounted) {
-        if (updated != null) {
-          setState(() {
-            _event = updated;
-            _populateEditForm(updated);
-            _isEditing = false;
-            _isSaving = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              duration: Duration(seconds: 5),
-              content: Text('Event updated successfully!'),
-            ),
-          );
-        } else {
-          setState(() => _isSaving = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              duration: Duration(seconds: 5),
-              content: Text('Failed to update event.'),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 5),
-            content: Text('Error saving event: $e'),
-          ),
-        );
-      }
     }
   }
 
@@ -383,7 +212,7 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 540),
+          constraints: const BoxConstraints(maxWidth: 600),
           child: _buildBody(),
         ),
       ),
@@ -481,529 +310,110 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
     return _buildEventDetails(_event!);
   }
 
+  Future<void> _saveSharedEvent(
+    CalendarEvent savedEvent,
+    int? travelMins,
+  ) async {
+    final title = savedEvent.title.trim();
+    if (title.isEmpty) return;
+
+    try {
+      final updated = await client.share.updateSharedEvent(
+        token: widget.shareToken,
+        title: title,
+        startTime: savedEvent.startTime.toUtc(),
+        endTime: savedEvent.endTime.toUtc(),
+        location: savedEvent.location?.trim().isNotEmpty == true
+            ? savedEvent.location!.trim()
+            : null,
+        startLocation: savedEvent.startLocation?.trim().isNotEmpty == true
+            ? savedEvent.startLocation!.trim()
+            : null,
+        transportMode: savedEvent.transportMode ?? 'driving',
+        travelMinutes: travelMins ?? _event?.travelMinutes ?? 0,
+        bufferMinutes: savedEvent.bufferMinutes ?? 0,
+        personName: _event?.personName,
+      );
+
+      if (mounted) {
+        if (updated != null) {
+          setState(() {
+            _event = updated;
+            _populateEditForm(updated);
+            _isEditing = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              duration: Duration(seconds: 5),
+              content: Text('Event updated successfully!'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              duration: Duration(seconds: 5),
+              content: Text('Failed to update event.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 5),
+            content: Text('Error saving event: $e'),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildEditForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Edit Banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Card(
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            color: Colors.white.withValues(alpha: 0.16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
                 color: Colors.white.withValues(alpha: 0.28),
-                width: 1.2,
+                width: 1,
               ),
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.edit_note_rounded,
-                  color: AppTheme.goldenYellow,
-                  size: 20,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: InlineEventEditor(
+                event: CalendarEvent(
+                  eventId: _event!.shareToken,
+                  title: _event!.title,
+                  startTime: _event!.startTime,
+                  endTime: _event!.endTime,
+                  location: _event!.location,
+                  startLocation: _event!.startLocation,
+                  transportMode: _event!.transportMode ?? 'driving',
+                  bufferMinutes: _event!.bufferMinutes ?? 0,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Editing Shared Event — updates will reflect on this link for everyone!',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                  tooltip: 'Cancel Edit',
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = false;
-                      if (_event != null) _populateEditForm(_event!);
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          // Title
-          TextFormField(
-            controller: _titleController,
-            style: GoogleFonts.fredoka(fontSize: 15, color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Event Title',
-              labelStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
-              hintText: 'e.g. Flight, Interview, Dinner',
-              hintStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-              prefixIcon: const Icon(
-                Icons.event_note_rounded,
-                color: Colors.white,
-              ),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.goldenYellow,
-                  width: 1.5,
-                ),
+                initialTravelMinutes: _event!.travelMinutes,
+                showPersonSelector: false,
+                allowEditEndTime: true,
+                allowAdjustTravelTime: true,
+                onSaveWithTravel: (savedEvent, travelMins) async {
+                  await _saveSharedEvent(savedEvent, travelMins);
+                },
+                onSave: (_) {},
+                onCancel: () {
+                  setState(() => _isEditing = false);
+                },
               ),
             ),
           ),
-
-          const SizedBox(height: 14),
-
-          // Date Picker Card
-          InkWell(
-            onTap: _pickDate,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_month_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Event Date:',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    DateFormat('EEEE, MMM d, y').format(_editStartTime),
-                    style: GoogleFonts.fredoka(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.arrow_drop_down, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Times Row
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => _pickTime(true),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Start Time',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time_rounded,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              DateFormat(
-                                'h:mm a',
-                              ).format(_editStartTime).toLowerCase(),
-                              style: GoogleFonts.fredoka(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: InkWell(
-                  onTap: () => _pickTime(false),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'End Time',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.done_all_rounded,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              DateFormat(
-                                'h:mm a',
-                              ).format(_editEndTime).toLowerCase(),
-                              style: GoogleFonts.fredoka(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // Starting Location
-          TextFormField(
-            controller: _startLocationController,
-            style: GoogleFonts.fredoka(fontSize: 14, color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Starting Location (Origin)',
-              labelStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
-              hintText: 'e.g. Home, Office, Hotel',
-              hintStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-              prefixIcon: const Icon(
-                Icons.my_location_rounded,
-                color: Colors.white,
-              ),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.goldenYellow,
-                  width: 1.5,
-                ),
-              ),
-            ),
-            onChanged: (_) => _calculateTravel(),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Destination
-          TextFormField(
-            controller: _destinationController,
-            style: GoogleFonts.fredoka(fontSize: 14, color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Destination (Event Location)',
-              labelStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
-              hintText: 'e.g. 123 Main St, Airport Terminal 2',
-              hintStyle: GoogleFonts.fredoka(
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-              prefixIcon: const Icon(
-                Icons.location_on_outlined,
-                color: Colors.white,
-              ),
-              suffixIcon: _isCalculatingTravel
-                  ? const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.goldenYellow,
-                  width: 1.5,
-                ),
-              ),
-            ),
-            onChanged: (_) => _calculateTravel(),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Transport Mode
-          Text(
-            'Mode of Transport:',
-            style: GoogleFonts.fredoka(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'driving',
-                icon: Icon(Icons.directions_car, size: 16),
-                label: Text('Drive'),
-              ),
-              ButtonSegment(
-                value: 'transit',
-                icon: Icon(Icons.directions_transit, size: 16),
-                label: Text('Transit'),
-              ),
-              ButtonSegment(
-                value: 'walking',
-                icon: Icon(Icons.directions_walk, size: 16),
-                label: Text('Walk'),
-              ),
-              ButtonSegment(
-                value: 'bicycling',
-                icon: Icon(Icons.directions_bike, size: 16),
-                label: Text('Bike'),
-              ),
-            ],
-            selected: {_editTransportMode},
-            onSelectionChanged: (newSel) {
-              setState(() => _editTransportMode = newSel.first);
-              _calculateTravel();
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // Commute time chips
-          Text(
-            'Commute Duration: ${_isCalculatingTravel ? 'Calculating...' : '$_editTravelMinutes min'}',
-            style: GoogleFonts.fredoka(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [10, 15, 20, 30, 45, 60].map((m) {
-              final isSel = _editTravelMinutes == m;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ActionChip(
-                  label: Text('${m}m'),
-                  backgroundColor: isSel
-                      ? AppTheme.goldenYellow
-                      : Colors.white.withValues(alpha: 0.16),
-                  labelStyle: GoogleFonts.fredoka(
-                    color: isSel ? AppTheme.deepBrown : Colors.white,
-                    fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                  onPressed: () => setState(() => _editTravelMinutes = m),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Buffer Time Quick Chips
-          Text(
-            'Meeting Buffer Time: $_editBufferMinutes min',
-            style: GoogleFonts.fredoka(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [0, 5, 10, 15, 20, 30].map((m) {
-              final isSel = _editBufferMinutes == m;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ActionChip(
-                  label: Text('${m}m'),
-                  backgroundColor: isSel
-                      ? AppTheme.goldenYellow
-                      : Colors.white.withValues(alpha: 0.16),
-                  labelStyle: GoogleFonts.fredoka(
-                    color: isSel ? AppTheme.deepBrown : Colors.white,
-                    fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                  onPressed: () => setState(() => _editBufferMinutes = m),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Save & Cancel Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () {
-                          setState(() {
-                            _isEditing = false;
-                            if (_event != null) _populateEditForm(_event!);
-                          });
-                        },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.4),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: _isSaving ? null : _saveChanges,
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.deepBrown,
-                          ),
-                        )
-                      : const Icon(Icons.save_rounded, size: 18),
-                  label: Text(
-                    _isSaving ? 'Saving...' : 'Save Changes',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.goldenYellow,
-                    foregroundColor: AppTheme.deepBrown,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1024,6 +434,25 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
         ? endUtc.difference(nowUtc)
         : leaveByTimeUtc.difference(nowUtc);
     final bool isLate = !isOngoing && durationRemaining.isNegative;
+
+    String countdownBadge;
+    if (isOngoing) {
+      countdownBadge = 'In progress';
+    } else if (isLate) {
+      final lateMins = durationRemaining.abs().inMinutes;
+      countdownBadge = lateMins > 0 ? '$lateMins min late' : 'Time to leave!';
+    } else {
+      final mins = durationRemaining.inMinutes;
+      if (mins >= 60) {
+        final hrs = mins ~/ 60;
+        final remMins = mins % 60;
+        countdownBadge = remMins > 0 ? 'in ${hrs}h ${remMins}m' : 'in ${hrs}h';
+      } else if (mins > 0) {
+        countdownBadge = 'in ${mins}m';
+      } else {
+        countdownBadge = 'in <1m';
+      }
+    }
 
     final hasLocations =
         event.startLocation?.trim().isNotEmpty == true &&
@@ -1280,7 +709,7 @@ class _SharedEventScreenState extends State<SharedEventScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()}',
+                                      'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()} ($countdownBadge)',
                                       style: GoogleFonts.fredoka(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,

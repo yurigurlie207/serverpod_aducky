@@ -306,8 +306,12 @@ class CalendarEndpoint extends Endpoint {
                 if (event.location != null) 'location': event.location,
                 'start': {
                   'dateTime': event.startTime.toUtc().toIso8601String(),
+                  'date': null,
                 },
-                'end': {'dateTime': event.endTime.toUtc().toIso8601String()},
+                'end': {
+                  'dateTime': event.endTime.toUtc().toIso8601String(),
+                  'date': null,
+                },
               });
               await http.patch(
                 url,
@@ -316,6 +320,16 @@ class CalendarEndpoint extends Endpoint {
                   'Content-Type': 'application/json',
                 },
                 body: body,
+              );
+              // Invalidate cache so fresh fetch will reflect updated event
+              await session.caches.local.invalidateKey(
+                'cached_google_events_${userId.toString()}',
+              );
+              await session.caches.local.invalidateKey(
+                'cached_google_events_$email',
+              );
+              await session.caches.local.invalidateKey(
+                'cached_google_events_${email.toLowerCase()}',
               );
             }
           }
