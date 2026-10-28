@@ -32,6 +32,10 @@ places:
 profile:
   - getProfile:
   - saveProfile:
+share:
+  - createShareLink:
+  - getSharedEvent:
+  - sendShareLink:
 travel:
   - getTravelTime:
 greeting:

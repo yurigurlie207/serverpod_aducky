@@ -33,6 +33,7 @@ import '../theme/app_theme.dart';
 import '../services/profile_preferences.dart';
 import '../services/sms_notification_service.dart';
 import '../services/maps_launcher_service.dart';
+import '../widgets/share_countdown_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -398,46 +399,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Builder(
-                    builder: (context) {
-                      final personName = _getPersonForEvent(event);
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text.rich(
-                          TextSpan(
-                            text: event.title,
-                            style: GoogleFonts.fredoka(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                            children: [
-                              if (personName.isNotEmpty)
-                                TextSpan(
-                                  text: '  $personName',
-                                  style: GoogleFonts.fredoka(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFFFFD54F),
-                                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(width: 28),
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            final personName = _getPersonForEvent(event);
+                            return Text.rich(
+                              TextSpan(
+                                text: event.title,
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                                children: [
+                                  if (personName.isNotEmpty)
+                                    TextSpan(
+                                      text: '  $personName',
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFFFFD54F),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                      Tooltip(
+                        message: 'Share live countdown link',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => _openShareDialog(event),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Icon(
+                              Icons.share_outlined,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 6),
                   Text(
                     _isAllDay(event)
                         ? 'All day'
-                        : DateFormat(
-                            'h:mm a',
-                          ).format(event.startTime.toLocal()).toLowerCase(),
+                        : 'Starts ${DateFormat('h:mm a').format(event.startTime.toLocal()).toLowerCase()}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.fredoka(
                       fontSize: 16,
@@ -445,6 +465,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
+                  if (!_isAllDay(event)) ...[
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isLate
+                              ? const Color(0xFFFF8A80).withValues(alpha: 0.25)
+                              : AppTheme.goldenYellow.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isLate
+                                ? const Color(0xFFFF8A80).withValues(alpha: 0.6)
+                                : AppTheme.goldenYellow.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.departure_board_rounded,
+                              size: 16,
+                              color: isLate
+                                  ? const Color(0xFFFF8A80)
+                                  : AppTheme.goldenYellow,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Leave by: ${DateFormat('h:mm a').format(leaveByTimeUtc.toLocal()).toLowerCase()}',
+                              style: GoogleFonts.fredoka(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: isLate
+                                    ? const Color(0xFFFF8A80)
+                                    : AppTheme.goldenYellow,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
 
                   // Commute Info: Only Car/Transport Icon and Commute Duration when not in edit mode
@@ -557,6 +623,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
+                  if (destination.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 15,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            destination,
+                            style: GoogleFonts.fredoka(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1523,6 +1617,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  void _openShareDialog(CalendarEvent event) {
+    showDialog(
+      context: context,
+      builder: (_) => ShareCountdownDialog(
+        title: event.title,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        startLocation: event.startLocation ?? _homeAddress,
+        transportMode: event.transportMode ?? _transportMode,
+        travelMinutes: _travelMinutes ?? 0,
+        bufferMinutes: event.bufferMinutes ?? _meetingBufferMinutes,
+        personName: _getPersonForEvent(event),
+      ),
+    );
+  }
+
   Widget _buildEditorContent(CalendarEvent? event, {Key? key}) {
     final isCurrentEventPage = _showCurrentEventOnly;
     return Center(
@@ -1689,6 +1800,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           actions: [
+            if (_showCurrentEventOnly && _getNextEvent() != null)
+              IconButton(
+                icon: const Icon(
+                  Icons.share_rounded,
+                  size: 20,
+                  color: Colors.white,
+                ),
+                tooltip: 'Share Live Countdown',
+                onPressed: () => _openShareDialog(_getNextEvent()!),
+              ),
             IconButton(
               icon: const Icon(
                 Icons.person_outline,

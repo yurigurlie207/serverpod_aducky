@@ -21,7 +21,7 @@ import '../generated/protocol.dart';
 
 class TravelEndpoint extends Endpoint {
   @override
-  bool get requireLogin => true;
+  bool get requireLogin => false;
 
   Future<TravelResult> getTravelTime(
     Session session, {

@@ -21,7 +21,9 @@ import '../client.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/google_auth_helper.dart';
 import '../services/google_auth_locator.dart';
+import '../theme/app_theme.dart';
 import 'about_screen.dart';
+import 'single_event_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   final Widget child;
@@ -620,6 +622,44 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                               child: const Text('Sign in with Google'),
+                            ),
+                            const SizedBox(height: 14),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SingleEventScreen(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.flash_on_rounded,
+                                color: AppTheme.goldenYellow,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Use for a Single Event (No Account)',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: AppTheme.goldenYellow.withValues(
+                                    alpha: 0.65,
+                                  ),
+                                  width: 1.2,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                  horizontal: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                textStyle: GoogleFonts.fredoka(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
                             ),
                           ],
                         ),

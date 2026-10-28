@@ -26,6 +26,7 @@ import 'calendar_event.dart' as _ix2r355r;
 import 'greetings/greeting.dart' as _izw8z7ou;
 import 'location_details.dart' as _imw3eshy;
 import 'place_suggestion.dart' as _icek8ivy;
+import 'shared_event.dart' as _i9kh3b93;
 import 'travel_result.dart' as _i4us4l0r;
 import 'user_location_profile.dart' as _imb99of0;
 export 'ai_schedule_response.dart';
@@ -33,6 +34,7 @@ export 'calendar_event.dart';
 export 'greetings/greeting.dart';
 export 'location_details.dart';
 export 'place_suggestion.dart';
+export 'shared_event.dart';
 export 'travel_result.dart';
 export 'user_location_profile.dart';
 
@@ -123,6 +125,125 @@ class Protocol extends _is.DatabaseSerializationManager {
       ],
       foreignKeys: [],
       indexes: [],
+      managed: true,
+    ),
+    _isp.TableDefinition(
+      name: 'shared_event',
+      dartName: 'SharedEvent',
+      schema: 'public',
+      module: 'serverpod_aducky',
+      columns: [
+        _isp.ColumnDefinition(
+          name: 'id',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'serial',
+        ),
+        _isp.ColumnDefinition(
+          name: 'shareToken',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'title',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'startTime',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'endTime',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'location',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'startLocation',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'transportMode',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+          columnDefault: '\'driving\'',
+        ),
+        _isp.ColumnDefinition(
+          name: 'travelMinutes',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+          columnDefault: '0',
+        ),
+        _isp.ColumnDefinition(
+          name: 'bufferMinutes',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+          columnDefault: '0',
+        ),
+        _isp.ColumnDefinition(
+          name: 'leaveByTime',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'personName',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'createdById',
+          columnType: _isp.ColumnType.uuid,
+          isNullable: true,
+          dartType: 'UuidValue?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'expiresAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: true,
+          dartType: 'DateTime?',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _isp.IndexDefinition(
+          indexName: 'shared_event_token_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'shareToken',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
+        ),
+      ],
       managed: true,
     ),
     _isp.TableDefinition(
@@ -241,6 +362,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _icek8ivy.PlaceSuggestion) {
       return _icek8ivy.PlaceSuggestion.fromJson(data) as T;
     }
+    if (t == _i9kh3b93.SharedEvent) {
+      return _i9kh3b93.SharedEvent.fromJson(data) as T;
+    }
     if (t == _i4us4l0r.TravelResult) {
       return _i4us4l0r.TravelResult.fromJson(data) as T;
     }
@@ -265,6 +389,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is.getType<_icek8ivy.PlaceSuggestion?>()) {
       return (data != null ? _icek8ivy.PlaceSuggestion.fromJson(data) : null)
           as T;
+    }
+    if (t == _is.getType<_i9kh3b93.SharedEvent?>()) {
+      return (data != null ? _i9kh3b93.SharedEvent.fromJson(data) : null) as T;
     }
     if (t == _is.getType<_i4us4l0r.TravelResult?>()) {
       return (data != null ? _i4us4l0r.TravelResult.fromJson(data) : null) as T;
@@ -315,6 +442,7 @@ class Protocol extends _is.DatabaseSerializationManager {
       _izw8z7ou.Greeting => 'Greeting',
       _imw3eshy.LocationDetails => 'LocationDetails',
       _icek8ivy.PlaceSuggestion => 'PlaceSuggestion',
+      _i9kh3b93.SharedEvent => 'SharedEvent',
       _i4us4l0r.TravelResult => 'TravelResult',
       _imb99of0.UserLocationProfile => 'UserLocationProfile',
       _ => null,
@@ -344,6 +472,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'LocationDetails';
       case _icek8ivy.PlaceSuggestion():
         return 'PlaceSuggestion';
+      case _i9kh3b93.SharedEvent():
+        return 'SharedEvent';
       case _i4us4l0r.TravelResult():
         return 'TravelResult';
       case _imb99of0.UserLocationProfile():
@@ -388,6 +518,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'PlaceSuggestion') {
       return deserialize<_icek8ivy.PlaceSuggestion>(data['data']);
+    }
+    if (dataClassName == 'SharedEvent') {
+      return deserialize<_i9kh3b93.SharedEvent>(data['data']);
     }
     if (dataClassName == 'TravelResult') {
       return deserialize<_i4us4l0r.TravelResult>(data['data']);
@@ -438,6 +571,8 @@ class Protocol extends _is.DatabaseSerializationManager {
     switch (t) {
       case _ix2r355r.CalendarEvent:
         return _ix2r355r.CalendarEvent.t;
+      case _i9kh3b93.SharedEvent:
+        return _i9kh3b93.SharedEvent.t;
       case _imb99of0.UserLocationProfile:
         return _imb99of0.UserLocationProfile.t;
     }

@@ -22,6 +22,8 @@ import 'package:serverpod_aducky_client/src/protocol/location_details.dart'
     as _i0k6jrsp;
 import 'package:serverpod_aducky_client/src/protocol/place_suggestion.dart'
     as _irll6ro1;
+import 'package:serverpod_aducky_client/src/protocol/shared_event.dart'
+    as _i7kts2jy;
 import 'package:serverpod_aducky_client/src/protocol/travel_result.dart'
     as _itz10shf;
 import 'package:serverpod_aducky_client/src/protocol/user_location_profile.dart'
@@ -507,6 +509,68 @@ class EndpointProfile extends _isc.EndpointRef {
 }
 
 /// {@category Endpoint}
+class EndpointShare extends _isc.EndpointRef {
+  EndpointShare(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'share';
+
+  /// Creates a shareable live countdown link for an event.
+  /// Works for both authenticated users and guests.
+  _ida.Future<_i7kts2jy.SharedEvent> createShareLink({
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? location,
+    String? startLocation,
+    String? transportMode,
+    int? travelMinutes,
+    int? bufferMinutes,
+    String? personName,
+  }) => caller.callServerEndpoint<_i7kts2jy.SharedEvent>(
+    'share',
+    'createShareLink',
+    {
+      'title': title,
+      'startTime': startTime,
+      'endTime': endTime,
+      'location': location,
+      'startLocation': startLocation,
+      'transportMode': transportMode,
+      'travelMinutes': travelMinutes,
+      'bufferMinutes': bufferMinutes,
+      'personName': personName,
+    },
+  );
+
+  /// Fetches a shared event by its unique share token.
+  /// Open to everyone without authentication.
+  _ida.Future<_i7kts2jy.SharedEvent?> getSharedEvent(String token) =>
+      caller.callServerEndpoint<_i7kts2jy.SharedEvent?>(
+        'share',
+        'getSharedEvent',
+        {'token': token},
+      );
+
+  /// Sends the share link to a recipient either via SMS phone number or email.
+  _ida.Future<bool> sendShareLink({
+    required String token,
+    String? phoneNumber,
+    String? email,
+    required String shareUrl,
+  }) => caller.callServerEndpoint<bool>(
+    'share',
+    'sendShareLink',
+    {
+      'token': token,
+      'phoneNumber': phoneNumber,
+      'email': email,
+      'shareUrl': shareUrl,
+    },
+  );
+}
+
+/// {@category Endpoint}
 class EndpointTravel extends _isc.EndpointRef {
   EndpointTravel(_isc.EndpointCaller caller) : super(caller);
 
@@ -593,6 +657,7 @@ class Client extends _isc.ServerpodClientShared {
     notification = EndpointNotification(this);
     places = EndpointPlaces(this);
     profile = EndpointProfile(this);
+    share = EndpointShare(this);
     travel = EndpointTravel(this);
     greeting = EndpointGreeting(this);
     modules = Modules(this);
@@ -616,6 +681,8 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointProfile profile;
 
+  late final EndpointShare share;
+
   late final EndpointTravel travel;
 
   late final EndpointGreeting greeting;
@@ -633,6 +700,7 @@ class Client extends _isc.ServerpodClientShared {
     'notification': notification,
     'places': places,
     'profile': profile,
+    'share': share,
     'travel': travel,
     'greeting': greeting,
   };

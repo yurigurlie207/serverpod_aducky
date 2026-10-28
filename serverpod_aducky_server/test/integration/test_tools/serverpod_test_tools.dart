@@ -24,6 +24,8 @@ import 'package:serverpod_aducky_server/src/generated/location_details.dart'
     as _i73wn8q9;
 import 'package:serverpod_aducky_server/src/generated/place_suggestion.dart'
     as _i5xrih7u;
+import 'package:serverpod_aducky_server/src/generated/shared_event.dart'
+    as _i3oadw95;
 import 'package:serverpod_aducky_server/src/generated/travel_result.dart'
     as _izwox9yi;
 import 'package:serverpod_aducky_server/src/generated/user_location_profile.dart'
@@ -53,6 +55,9 @@ export 'package:serverpod_test/serverpod_test_public_exports.dart';
 /// [applyMigrations] Whether pending migrations should be applied when starting Serverpod. Defaults to `true`
 ///
 /// [enableSessionLogging] Whether session logging should be enabled. Defaults to `false`
+///
+/// [ephemeralDatabase] Whether this group gets its own empty database, created when the group starts and dropped when it finishes. Defaults to `true`.
+/// Set this to `false` to use the database configured for [runMode], including a previously seeded database. [configOverride] can still replace that database. The configured database is not created or dropped, so groups that share it cannot run in parallel. [rollbackDatabase] still controls whether writes inside the group are rolled back.
 ///
 /// [rollbackDatabase] Options for when to rollback the database during the test lifecycle.
 /// By default `withServerpod` does all database operations inside a transaction that is rolled back after each `test` case.
@@ -123,6 +128,7 @@ void withServerpod(
   _is.ServerpodConfig Function(_is.ServerpodConfig)? configOverride,
   _is.DatabaseInterceptor? databaseInterceptor,
   bool? enableSessionLogging,
+  bool? ephemeralDatabase,
   _is.ExperimentalFeatures? experimentalFeatures,
   _ist.RollbackDatabase? rollbackDatabase,
   String? runMode,
@@ -177,6 +183,8 @@ class TestEndpoints {
 
   late final _ProfileEndpoint profile;
 
+  late final _ShareEndpoint share;
+
   late final _TravelEndpoint travel;
 
   late final _GreetingEndpoint greeting;
@@ -222,6 +230,10 @@ class _InternalTestEndpoints extends TestEndpoints
       serializationManager,
     );
     profile = _ProfileEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    share = _ShareEndpoint(
       endpoints,
       serializationManager,
     );
@@ -1168,6 +1180,136 @@ class _ProfileEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_iziryvkt.UserLocationProfile>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _ShareEndpoint {
+  _ShareEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_i3oadw95.SharedEvent> createShareLink(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? location,
+    String? startLocation,
+    String? transportMode,
+    int? travelMinutes,
+    int? bufferMinutes,
+    String? personName,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'share',
+            method: 'createShareLink',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'share',
+          methodName: 'createShareLink',
+          parameters: _ist.testObjectToJson({
+            'title': title,
+            'startTime': startTime,
+            'endTime': endTime,
+            'location': location,
+            'startLocation': startLocation,
+            'transportMode': transportMode,
+            'travelMinutes': travelMinutes,
+            'bufferMinutes': bufferMinutes,
+            'personName': personName,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i3oadw95.SharedEvent>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i3oadw95.SharedEvent?> getSharedEvent(
+    _ist.TestSessionBuilder sessionBuilder,
+    String token,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'share',
+            method: 'getSharedEvent',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'share',
+          methodName: 'getSharedEvent',
+          parameters: _ist.testObjectToJson({'token': token}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i3oadw95.SharedEvent?>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<bool> sendShareLink(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String token,
+    String? phoneNumber,
+    String? email,
+    required String shareUrl,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'share',
+            method: 'sendShareLink',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'share',
+          methodName: 'sendShareLink',
+          parameters: _ist.testObjectToJson({
+            'token': token,
+            'phoneNumber': phoneNumber,
+            'email': email,
+            'shareUrl': shareUrl,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<bool>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

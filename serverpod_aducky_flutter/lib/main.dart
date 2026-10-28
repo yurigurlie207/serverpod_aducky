@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 
 import 'client.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/shared_event_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -25,6 +26,31 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeClient();
   runApp(const MyApp());
+}
+
+String? _getShareTokenFromUri() {
+  try {
+    final uri = Uri.base;
+    if (uri.queryParameters.containsKey('share')) {
+      final token = uri.queryParameters['share'];
+      if (token != null && token.trim().isNotEmpty) {
+        return token.trim();
+      }
+    }
+    if (uri.hasFragment && uri.fragment.contains('share=')) {
+      final frag = uri.fragment;
+      final qIndex = frag.indexOf('share=');
+      if (qIndex != -1) {
+        final sub = frag.substring(qIndex + 'share='.length);
+        final ampIndex = sub.indexOf('&');
+        final token = ampIndex != -1 ? sub.substring(0, ampIndex) : sub;
+        if (token.trim().isNotEmpty) {
+          return token.trim();
+        }
+      }
+    }
+  } catch (_) {}
+  return null;
 }
 
 class MyApp extends StatelessWidget {
@@ -64,6 +90,11 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final shareToken = _getShareTokenFromUri();
+    if (shareToken != null) {
+      return SharedEventScreen(shareToken: shareToken);
+    }
+
     return const SignInScreen(
       child: DashboardScreen(),
     );

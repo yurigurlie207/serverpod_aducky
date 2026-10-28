@@ -1,0 +1,21 @@
+class: SharedEvent
+table: shared_event
+fields:
+  shareToken: String
+  title: String
+  startTime: DateTime
+  endTime: DateTime
+  location: String?
+  startLocation: String?
+  transportMode: String?, default='driving'
+  travelMinutes: int?, default=0
+  bufferMinutes: int?, default=0
+  leaveByTime: DateTime
+  personName: String?
+  createdById: UuidValue?
+  createdAt: DateTime
+  expiresAt: DateTime?
+indexes:
+  shared_event_token_idx:
+    fields: shareToken
+    unique: true

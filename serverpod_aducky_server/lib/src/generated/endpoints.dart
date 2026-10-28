@@ -26,6 +26,7 @@ import '../endpoints/google_idp_endpoint.dart' as _iiimk4ot;
 import '../endpoints/notification_endpoint.dart' as _ihb11yhk;
 import '../endpoints/places_endpoint.dart' as _id40adi8;
 import '../endpoints/profile_endpoint.dart' as _i2cx2pww;
+import '../endpoints/share_endpoint.dart' as _ir7ph2j5;
 import '../endpoints/travel_endpoint.dart' as _ivmv8akq;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
 
@@ -85,6 +86,12 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'profile',
+          null,
+        ),
+      'share': _ir7ph2j5.ShareEndpoint()
+        ..initialize(
+          server,
+          'share',
           null,
         ),
       'travel': _ivmv8akq.TravelEndpoint()
@@ -740,6 +747,135 @@ class Endpoints extends _is.EndpointDispatch {
                     homeLat: params['homeLat'],
                     homeLng: params['homeLng'],
                     meetingBufferMinutes: params['meetingBufferMinutes'],
+                  ),
+        ),
+      },
+    );
+    connectors['share'] = _is.EndpointConnector(
+      name: 'share',
+      endpoint: endpoints['share']!,
+      methodConnectors: {
+        'createShareLink': _is.MethodConnector(
+          name: 'createShareLink',
+          params: {
+            'title': _is.ParameterDescription(
+              name: 'title',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'startTime': _is.ParameterDescription(
+              name: 'startTime',
+              type: _is.getType<DateTime>(),
+              nullable: false,
+            ),
+            'endTime': _is.ParameterDescription(
+              name: 'endTime',
+              type: _is.getType<DateTime>(),
+              nullable: false,
+            ),
+            'location': _is.ParameterDescription(
+              name: 'location',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'startLocation': _is.ParameterDescription(
+              name: 'startLocation',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'transportMode': _is.ParameterDescription(
+              name: 'transportMode',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'travelMinutes': _is.ParameterDescription(
+              name: 'travelMinutes',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+            'bufferMinutes': _is.ParameterDescription(
+              name: 'bufferMinutes',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+            'personName': _is.ParameterDescription(
+              name: 'personName',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['share'] as _ir7ph2j5.ShareEndpoint)
+                  .createShareLink(
+                    session,
+                    title: params['title'],
+                    startTime: params['startTime'],
+                    endTime: params['endTime'],
+                    location: params['location'],
+                    startLocation: params['startLocation'],
+                    transportMode: params['transportMode'],
+                    travelMinutes: params['travelMinutes'],
+                    bufferMinutes: params['bufferMinutes'],
+                    personName: params['personName'],
+                  ),
+        ),
+        'getSharedEvent': _is.MethodConnector(
+          name: 'getSharedEvent',
+          params: {
+            'token': _is.ParameterDescription(
+              name: 'token',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['share'] as _ir7ph2j5.ShareEndpoint)
+                  .getSharedEvent(
+                    session,
+                    params['token'],
+                  ),
+        ),
+        'sendShareLink': _is.MethodConnector(
+          name: 'sendShareLink',
+          params: {
+            'token': _is.ParameterDescription(
+              name: 'token',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'phoneNumber': _is.ParameterDescription(
+              name: 'phoneNumber',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'email': _is.ParameterDescription(
+              name: 'email',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'shareUrl': _is.ParameterDescription(
+              name: 'shareUrl',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['share'] as _ir7ph2j5.ShareEndpoint).sendShareLink(
+                    session,
+                    token: params['token'],
+                    phoneNumber: params['phoneNumber'],
+                    email: params['email'],
+                    shareUrl: params['shareUrl'],
                   ),
         ),
       },
