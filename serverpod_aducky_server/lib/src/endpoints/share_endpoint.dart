@@ -100,6 +100,55 @@ class ShareEndpoint extends Endpoint {
     );
   }
 
+  /// Updates an existing shared event using its token.
+  /// Allows whoever has the guest event link to edit the event details.
+  Future<SharedEvent?> updateSharedEvent(
+    Session session, {
+    required String token,
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? location,
+    String? startLocation,
+    String? transportMode,
+    int? travelMinutes,
+    int? bufferMinutes,
+    String? personName,
+  }) async {
+    final cleanToken = token.trim();
+    final existing = await SharedEvent.db.findFirstRow(
+      session,
+      where: (t) => t.shareToken.equals(cleanToken),
+    );
+    if (existing == null) return null;
+
+    final travel = travelMinutes ?? existing.travelMinutes ?? 0;
+    final buffer = bufferMinutes ?? existing.bufferMinutes ?? 0;
+    final totalPadMinutes = travel + buffer;
+    final leaveByTime = startTime.toUtc().subtract(
+      Duration(minutes: totalPadMinutes),
+    );
+
+    final updated = existing.copyWith(
+      title: title.trim().isEmpty ? existing.title : title.trim(),
+      startTime: startTime.toUtc(),
+      endTime: endTime.toUtc(),
+      location: location?.trim().isNotEmpty == true ? location!.trim() : null,
+      startLocation: startLocation?.trim().isNotEmpty == true
+          ? startLocation!.trim()
+          : null,
+      transportMode: transportMode ?? existing.transportMode,
+      travelMinutes: travel,
+      bufferMinutes: buffer,
+      leaveByTime: leaveByTime,
+      personName: personName?.trim().isNotEmpty == true
+          ? personName!.trim()
+          : existing.personName,
+    );
+
+    return await SharedEvent.db.updateRow(session, updated);
+  }
+
   /// Sends the share link to a recipient either via SMS phone number or email.
   Future<bool> sendShareLink(
     Session session, {

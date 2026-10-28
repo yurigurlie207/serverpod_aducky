@@ -35,6 +35,7 @@ profile:
 share:
   - createShareLink:
   - getSharedEvent:
+  - updateSharedEvent:
   - sendShareLink:
 travel:
   - getTravelTime:

@@ -56,9 +56,6 @@ export 'package:serverpod_test/serverpod_test_public_exports.dart';
 ///
 /// [enableSessionLogging] Whether session logging should be enabled. Defaults to `false`
 ///
-/// [ephemeralDatabase] Whether this group gets its own empty database, created when the group starts and dropped when it finishes. Defaults to `true`.
-/// Set this to `false` to use the database configured for [runMode], including a previously seeded database. [configOverride] can still replace that database. The configured database is not created or dropped, so groups that share it cannot run in parallel. [rollbackDatabase] still controls whether writes inside the group are rolled back.
-///
 /// [rollbackDatabase] Options for when to rollback the database during the test lifecycle.
 /// By default `withServerpod` does all database operations inside a transaction that is rolled back after each `test` case.
 /// Just like the following enum describes, the behavior of the automatic rollbacks can be configured:
@@ -128,7 +125,6 @@ void withServerpod(
   _is.ServerpodConfig Function(_is.ServerpodConfig)? configOverride,
   _is.DatabaseInterceptor? databaseInterceptor,
   bool? enableSessionLogging,
-  bool? ephemeralDatabase,
   _is.ExperimentalFeatures? experimentalFeatures,
   _ist.RollbackDatabase? rollbackDatabase,
   String? runMode,
@@ -1263,6 +1259,57 @@ class _ShareEndpoint {
           endpointPath: 'share',
           methodName: 'getSharedEvent',
           parameters: _ist.testObjectToJson({'token': token}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i3oadw95.SharedEvent?>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i3oadw95.SharedEvent?> updateSharedEvent(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required String token,
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? location,
+    String? startLocation,
+    String? transportMode,
+    int? travelMinutes,
+    int? bufferMinutes,
+    String? personName,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'share',
+            method: 'updateSharedEvent',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'share',
+          methodName: 'updateSharedEvent',
+          parameters: _ist.testObjectToJson({
+            'token': token,
+            'title': title,
+            'startTime': startTime,
+            'endTime': endTime,
+            'location': location,
+            'startLocation': startLocation,
+            'transportMode': transportMode,
+            'travelMinutes': travelMinutes,
+            'bufferMinutes': bufferMinutes,
+            'personName': personName,
+          }),
           serializationManager: _serializationManager,
         );
         var _localReturnValue =

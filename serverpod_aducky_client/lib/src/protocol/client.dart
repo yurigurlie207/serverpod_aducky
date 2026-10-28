@@ -552,6 +552,36 @@ class EndpointShare extends _isc.EndpointRef {
         {'token': token},
       );
 
+  /// Updates an existing shared event using its token.
+  /// Allows whoever has the guest event link to edit the event details.
+  _ida.Future<_i7kts2jy.SharedEvent?> updateSharedEvent({
+    required String token,
+    required String title,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? location,
+    String? startLocation,
+    String? transportMode,
+    int? travelMinutes,
+    int? bufferMinutes,
+    String? personName,
+  }) => caller.callServerEndpoint<_i7kts2jy.SharedEvent?>(
+    'share',
+    'updateSharedEvent',
+    {
+      'token': token,
+      'title': title,
+      'startTime': startTime,
+      'endTime': endTime,
+      'location': location,
+      'startLocation': startLocation,
+      'transportMode': transportMode,
+      'travelMinutes': travelMinutes,
+      'bufferMinutes': bufferMinutes,
+      'personName': personName,
+    },
+  );
+
   /// Sends the share link to a recipient either via SMS phone number or email.
   _ida.Future<bool> sendShareLink({
     required String token,

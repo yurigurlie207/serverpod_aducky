@@ -841,6 +841,79 @@ class Endpoints extends _is.EndpointDispatch {
                     params['token'],
                   ),
         ),
+        'updateSharedEvent': _is.MethodConnector(
+          name: 'updateSharedEvent',
+          params: {
+            'token': _is.ParameterDescription(
+              name: 'token',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'title': _is.ParameterDescription(
+              name: 'title',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'startTime': _is.ParameterDescription(
+              name: 'startTime',
+              type: _is.getType<DateTime>(),
+              nullable: false,
+            ),
+            'endTime': _is.ParameterDescription(
+              name: 'endTime',
+              type: _is.getType<DateTime>(),
+              nullable: false,
+            ),
+            'location': _is.ParameterDescription(
+              name: 'location',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'startLocation': _is.ParameterDescription(
+              name: 'startLocation',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'transportMode': _is.ParameterDescription(
+              name: 'transportMode',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+            'travelMinutes': _is.ParameterDescription(
+              name: 'travelMinutes',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+            'bufferMinutes': _is.ParameterDescription(
+              name: 'bufferMinutes',
+              type: _is.getType<int?>(),
+              nullable: true,
+            ),
+            'personName': _is.ParameterDescription(
+              name: 'personName',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['share'] as _ir7ph2j5.ShareEndpoint)
+                  .updateSharedEvent(
+                    session,
+                    token: params['token'],
+                    title: params['title'],
+                    startTime: params['startTime'],
+                    endTime: params['endTime'],
+                    location: params['location'],
+                    startLocation: params['startLocation'],
+                    transportMode: params['transportMode'],
+                    travelMinutes: params['travelMinutes'],
+                    bufferMinutes: params['bufferMinutes'],
+                    personName: params['personName'],
+                  ),
+        ),
         'sendShareLink': _is.MethodConnector(
           name: 'sendShareLink',
           params: {

@@ -181,7 +181,6 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.deepForest : AppTheme.warmLinen,
       appBar: AppBar(
         leading: Navigator.of(context).canPop()
             ? IconButton(
@@ -645,12 +644,11 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppTheme.forestGreen.withValues(alpha: 0.4)
-                      : Colors.white,
+                  color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppTheme.goldenYellow.withValues(alpha: 0.4),
+                    color: Colors.white.withValues(alpha: 0.28),
+                    width: 1.2,
                   ),
                 ),
                 child: Row(
@@ -700,14 +698,10 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(4.0),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? AppTheme.forestGreen.withValues(alpha: 0.4)
-                          : Colors.white,
+                      color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(44),
                       border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : colorScheme.outline.withValues(alpha: 0.2),
+                        color: Colors.white.withValues(alpha: 0.28),
                         width: 1.2,
                       ),
                       boxShadow: [
@@ -817,19 +811,15 @@ class _SingleEventScreenState extends State<SingleEventScreen> {
                   width: blockWidth,
                   child: Card(
                     elevation: 0,
-                    color: isDark
-                        ? AppTheme.forestGreen.withValues(alpha: 0.45)
-                        : Colors.white,
+                    color: isLate
+                        ? const Color(0xFFD32F2F).withValues(alpha: 0.35)
+                        : Colors.white.withValues(alpha: 0.18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
                         color: isLate
                             ? const Color(0xFFFF8A80).withValues(alpha: 0.5)
-                            : (isDark
-                                  ? Colors.white.withValues(alpha: 0.22)
-                                  : colorScheme.outline.withValues(
-                                      alpha: 0.25,
-                                    )),
+                            : Colors.white.withValues(alpha: 0.28),
                         width: 1.2,
                       ),
                     ),
